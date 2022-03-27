@@ -1,0 +1,112 @@
+{
+	"name": "@epic-design-labs/gatsby-source-bigcommerce",
+	"version": "1.0.5",
+	"description": "This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
+	"scripts": {
+		"build": "babel src --out-dir ./ --source-maps",
+		"watch": "babel src --out-dir ./ --source-maps --watch",
+		"lint": "eslint --ext '**/*.{js,jsx}' --cache --color",
+		"format": "prettier --write '**/*.{js,jsx}'",
+		"prepare": "husky install",
+		"test": "jest --color"
+	},
+	"jest": {
+		"collectCoverage": true
+	},
+	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce.git"
+	},
+	"keywords": [
+		"gatsby",
+		"gatsby-plugin",
+		"gatsby-source-bigcommerce",
+		"@epicdesignlabs",
+		"plugin",
+		"source",
+		"bigcommerce",
+		"api"
+	],
+	"author": {
+		"name": "Epic Design Labs",
+		"url": "https://epicdesignlabs.com",
+		"email": "info@epicdesignlabs.com"
+	},
+	"contributors": [
+		{
+			"name": "Guy Romelle Magayano",
+			"email": "guy@epicdesignlabs.com",
+			"url": "https://guyromellemagayano.dev"
+		},
+		{
+			"name": "Max Jerry",
+			"email": "maxjerry0107@hotmail.com",
+			"url": "https://maxjerry0107.github.io"
+		},
+		{
+			"name": "Grant Glidewell",
+			"url": "https://www.blogwell.io/"
+		},
+		{
+			"name": "Eric Boggs",
+			"email": "eric@mlemedia.com",
+			"url": "http://etboggs.com"
+		}
+	],
+	"license": "MIT",
+	"main": "index.js",
+	"dependencies": {
+		"@babel/runtime": "^7.17.8",
+		"babel-preset-gatsby": "^2.10.1",
+		"http-proxy-middleware": "^2.0.4",
+		"micro": "^9.3.4"
+	},
+	"peerDependencies": {
+		"gatsby": ">2.0.0"
+	},
+	"devDependencies": {
+		"@babel/cli": "^7.16.8",
+		"@babel/core": "^7.16.12",
+		"@babel/eslint-parser": "^7.16.5",
+		"@babel/plugin-transform-runtime": "^7.17.0",
+		"babel-jest": "^27.5.1",
+		"babel-preset-gatsby-package": "^2.10.0",
+		"commitizen": "^4.2.4",
+		"cz-conventional-changelog": "^3.3.0",
+		"eslint": "^8.11.0",
+		"eslint-config-prettier": "^8.5.0",
+		"eslint-plugin-babel": "^5.3.1",
+		"eslint-plugin-prettier": "^4.0.0",
+		"eslint-plugin-react": "^7.29.4",
+		"husky": "^7.0.4",
+		"jest": "^27.5.1",
+		"lint-staged": "^12.3.7",
+		"prettier": "^2.6.0",
+		"react": "^17.0.2"
+	},
+	"config": {
+		"commitizen": {
+			"path": "./node_modules/cz-conventional-changelog"
+		}
+	},
+	"husky": {
+		"hooks": {
+			"pre-commit": "yarn lint-staged",
+			"prepare-commit-msg": "exec < /dev/tty && git cz --hook || true",
+			"commit": "cz"
+		}
+	},
+	"lint-staged": {
+		"**/*.{js,jsx}": [
+			"yarn lint",
+			"yarn format"
+		]
+	},
+	"bugs": {
+		"url": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/issues"
+	},
+	"publishConfig": {
+		"@epic-design-labs:registry": "https://npm.pkg.github.com"
+	}
+}

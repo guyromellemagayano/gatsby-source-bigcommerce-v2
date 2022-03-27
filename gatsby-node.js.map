@@ -1,0 +1,1 @@
+{"version":3,"sources":["src/gatsby-node.js"],"names":[],"mappings":";;;;AAAA","sourcesContent":["import { sourceNodes } from \"./gatsby/sourceNodes\";\n\nexport { sourceNodes };\n"],"file":"gatsby-node.js"}

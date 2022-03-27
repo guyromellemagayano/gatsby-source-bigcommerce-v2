@@ -1,0 +1,21 @@
+{
+	"presets": [
+		[
+			"babel-preset-gatsby-package",
+			{
+				"browser": true,
+				"targets": {
+					"node": true
+				}
+			}
+		]
+	],
+	"comments": false,
+	"plugins": [
+		"@babel/plugin-transform-runtime"
+	],
+	"only": [
+		"src/",
+		"tests/"
+	]
+}
