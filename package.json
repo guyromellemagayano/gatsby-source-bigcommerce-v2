@@ -1,5 +1,5 @@
 {
-	"name": "@epicdesignlabs/gatsby-source-bigcommerce",
+	"name": "@epic-design-labs/gatsby-source-bigcommerce",
 	"version": "1.0.0",
 	"description": "This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
 	"scripts": {
@@ -22,7 +22,7 @@
 		"gatsby",
 		"gatsby-plugin",
 		"gatsby-source-bigcommerce",
-		"@epicdesignlabs",
+		"@epic-design-labs",
 		"plugin",
 		"source",
 		"bigcommerce",
@@ -107,8 +107,7 @@
 		"url": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/issues"
 	},
 	"publishConfig": {
-		"name": "@epicdesignlabs/gatsby-source-bigcommerce",
-		"access": "public",
-		"registry": "https://registry.npmjs.org/@epicdesignlabs"
+		"name": "@epic-design-labs/gatsby-source-bigcommerce",
+		"@epic-design-labs:registry": "https://npm.pkg.github.com"
 	}
 }
