@@ -107,6 +107,8 @@
 		"url": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/issues"
 	},
 	"publishConfig": {
-		"@epicdesignlabs:registry": "https://registry.npmjs.org"
+		"name": "@epicdesignlabs/gatsby-source-bigcommerce",
+		"access": "public",
+		"registry": "https://registry.npmjs.org/@epicdesignlabs"
 	}
 }
