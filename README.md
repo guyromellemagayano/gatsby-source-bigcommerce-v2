@@ -3,7 +3,6 @@
 This source plugin makes BigCommerce API data available in GatsbyJS sites.
 
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
-[![Epic-Design-Labs/gatsby-source-bigcommerce](https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/actions/workflows/release-package.yml/badge.svg)](https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/actions/workflows/release-package.yml)
 
 ## Features
 
