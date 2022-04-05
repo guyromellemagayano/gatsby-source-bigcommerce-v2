@@ -1,6 +1,6 @@
-# @Epic-Design-Labs/gatsby-source-bigcommerce
+# @epicdesignlabs/gatsby-source-bigcommerce
 
-This source plugin makes BigCommerce API data available in GatsbyJS sites.
+This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.
 
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 
@@ -13,13 +13,13 @@ This source plugin makes BigCommerce API data available in GatsbyJS sites.
 For `npm`:
 
 ```console
-npm install @Epic-Design-Labs/gatsby-source-bigcommerce
+npm install @epicdesignlabs/gatsby-source-bigcommerce
 ```
 
 For `yarn`:
 
 ```console
-yarn add @Epic-Design-Labs/gatsby-source-bigcommerce
+yarn add @epicdesignlabs/gatsby-source-bigcommerce
 ```
 
 Setup this plugin in `gatsby-config.js` as follows:
@@ -28,7 +28,7 @@ Setup this plugin in `gatsby-config.js` as follows:
 module.exports = {
 	plugins: [
 		{
-			resolve: "@Epic-Design-Labs/gatsby-source-bigcommerce",
+			resolve: "@epicdesignlabs/gatsby-source-bigcommerce",
 			options: {
 				clientId: process.env.BIGCOMMERCE_API_CLIENT_ID,
 				secret: process.env.BIGCOMMERCE_API_SECRET,
@@ -62,7 +62,10 @@ options: {
 
 	// Create a node name and map it to a valid `bigcommerce` endpoint
 	endpoints: {
+		// Single endpoint
 		BigCommerceProducts: "/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos",
+
+		// Multiple endpoints
 		BigCommerceCategories: "/v3/catalog/categories",
 		BigCommerceCategoriesTree: "/v3/catalog/categories/tree",
 		BigCommerceBrands: "/v3/catalog/brands"
