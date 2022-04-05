@@ -83,7 +83,7 @@
 		"jest": "^27.5.1",
 		"lint-staged": "^12.3.7",
 		"prettier": "^2.6.0",
-		"react": "^17.0.2"
+		"react": "^18.0.0"
 	},
 	"config": {
 		"commitizen": {
