@@ -1,3 +1,5 @@
+"use strict";
+
 import https from "https";
 import zlib from "zlib";
 import { FG_BLUE, FG_CYAN, FG_GREEN, FG_RED, FG_WHITE, FG_YELLOW, HTTPS_PROTOCOL } from "../constants";
@@ -151,17 +153,17 @@ class Request {
 			});
 
 			dataString !== null
-				? () => {
+				? (() => {
 						// Send log message when sending data
 						console.log(FG_YELLOW, "\nSending BigCommerce data...");
 
 						// Send log message when requesting data
-						console.log(FG_GREEN, `\n${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}\n`);
+						console.log(FG_GREEN, `\n${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}`);
 
 						req.write(dataString);
 
-						console.log(FG_GREEN, "\nSending complete.");
-				  }
+						console.log(FG_GREEN, "\nSending complete.\n");
+				  })()
 				: null;
 
 			// Handle BigCommerce API request errors

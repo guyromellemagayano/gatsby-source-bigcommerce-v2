@@ -1,3 +1,5 @@
+"use strict";
+
 import crypto from "crypto";
 import { FG_BLUE, FG_GREEN, FG_RED, REQUEST_BIGCOMMERCE_API_URL, REQUEST_BIGCOMMERCE_LOGIN_URL } from "../constants";
 import { handleConversionStringToObject } from "./convertValues";
