@@ -1,13 +1,16 @@
-/* eslint-disable no-unused-vars */
-import { FG_GREEN, FG_RED, FG_YELLOW } from "../constants";
+"use strict";
+
+import { createProxyMiddleware } from "http-proxy-middleware";
+import micro from "micro";
+import { FG_GREEN, FG_RED, FG_YELLOW, IS_DEV } from "../constants";
 import BigCommerce from "../utils/bigcommerce";
 import { handleConversionObjectToString } from "../utils/convertValues";
-// const { createProxyMiddleware } = require("http-proxy-middleware");
 
-export const sourceNodes = async ({ actions, createNodeId, createContentDigest }, configOptions) => {
+exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, configOptions) => {
 	const { createNode } = actions;
 	const { endpoints = null, clientId = null, secret = null, storeHash = null, accessToken = null, hostname = null, preview = false } = configOptions;
 
+	// Custom variables
 	let errMessage = "";
 
 	// Send log message when checking for required options
@@ -15,23 +18,23 @@ export const sourceNodes = async ({ actions, createNodeId, createContentDigest }
 
 	if (endpoints !== null && clientId !== null && secret !== null && storeHash !== null && accessToken !== null) {
 		// Init new `BigCommerce` instance
-		const bigCommerce = new BigCommerce({
-			clientId: clientId,
-			accessToken: accessToken,
-			secret: secret,
-			storeHash: storeHash,
+		const BC = new BigCommerce({
+			clientId,
+			accessToken,
+			secret,
+			storeHash,
 			responseType: "json"
 		});
 
 		// Handle fetching and creating nodes for a single or multiple endpoints
-		if (typeof endpoints === "object" && Object.keys(endpoints).length > 0) {
+		if (endpoints && typeof endpoints === "object" && Object.keys(endpoints).length > 0) {
 			// Send log message when fetching data
 			console.log(FG_GREEN, "\nValid plugin options found. Proceeding with plugin initialization...");
 			console.log(FG_YELLOW, "\nRequesting endpoint data...\n");
 
 			await Promise.all(
 				Object.entries(endpoints).map(([nodeName, endpoint]) => {
-					return bigCommerce.get(endpoint).then((res) => {
+					return BC.get(endpoint).then((res) => {
 						// If the data object is not on the response, it could be `v2` which returns an array as the root, so use that as a fallback
 						const resData = "data" in res && Array.isArray(res.data) ? res.data : res;
 
@@ -96,50 +99,47 @@ export const sourceNodes = async ({ actions, createNodeId, createContentDigest }
 			errMessage = new Error("The `endpoints` object is required to make any call to the BigCommerce API");
 		}
 
-		// [WIP] Check if the store is in preview mode, and if so, return error
-		if (preview) {
-			errMessage = new Error("The `preview` option is not currently supported. A fix is in the works.");
+		if (IS_DEV && preview) {
+			// Make a `POST` request to the BigCommerce API to subscribe to its webhook
+			const webhookEndpoint = "/v3/hooks";
+			const body = {
+				scope: "store/product/updated",
+				is_active: true,
+				destination: `${hostname}/__BCPreview`
+			};
 
-			// if (IS_DEV) {
-			// 	// Make a `POST` request to the BigCommerce API to subscribe to its webhook
-			// 	const webhookEndpoint = "v3/hooks";
-			// 	const body = handleConversionObjectToString({
-			// 		scope: "store/product/updated",
-			// 		is_active: true,
-			// 		destination: `${hostname}/___BCPreview`
-			// 	});
+			BC.post(webhookEndpoint, body).then((res) => {
+				if ("data" in res && Array.isArray(res.data)) {
+					const server = micro(async (req, res) => {
+						const request = await micro.json(req);
+						const productId = request.data.id;
 
-			// 	bigCommerce.post(webhookEndpoint, body);
+						// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
+						const newProduct = await BC.get(`/catalog/products/${productId}`);
+						const nodeToUpdate = newProduct.data;
 
-			// 	const server = micro(async (req, res) => {
-			// 		const request = await micro.json(req);
-			// 		const productId = request.data.id;
+						if (nodeToUpdate.id) {
+							createNode({
+								...nodeToUpdate,
+								id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
+								parent: null,
+								children: [],
+								internal: {
+									type: `BigCommerceNode`,
+									contentDigest: createContentDigest(nodeToUpdate)
+								}
+							});
 
-			// 		// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
-			// 		const newProduct = await bigCommerce.get(`/catalog/products/${productId}`);
-			// 		const nodeToUpdate = newProduct.data;
+							console.log(FG_YELLOW, `\nUpdated node: ${nodeToUpdate.id}`);
+						}
 
-			// 		if (nodeToUpdate.id) {
-			// 			createNode({
-			// 				...nodeToUpdate,
-			// 				id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
-			// 				parent: null,
-			// 				children: [],
-			// 				internal: {
-			// 					type: `BigCommerceNode`,
-			// 					contentDigest: createContentDigest(nodeToUpdate)
-			// 				}
-			// 			});
+						// Send a response back to the BigCommerce API
+						res.end("ok");
+					});
 
-			// 			console.log(FG_YELLOW, `\nUpdated node: ${nodeToUpdate.id}`);
-			// 		}
-
-			// 		// Send a response back to the BigCommerce API
-			// 		res.end("ok");
-			// 	});
-
-			// 	server.listen(8033, console.log(FG_YELLOW, `Now listening to changes for live preview at route /___BCPreview\n`));
-			// }
+					server.listen(8033, console.log(FG_YELLOW, `\nNow listening to changes for live preview at route /__BCPreview\n`));
+				}
+			});
 		}
 	} else {
 		// If `endpoints` is null, throw an error
@@ -177,12 +177,12 @@ export const sourceNodes = async ({ actions, createNodeId, createContentDigest }
 	}
 };
 
-// exports.onCreateDevServer = ({ app }) => {
-// 	app.use(
-// 		"/___BCPreview/",
-// 		createProxyMiddleware({
-// 			target: `http://localhost:8033`,
-// 			secure: false
-// 		})
-// 	);
-// };
+exports.onCreateDevServer = ({ app }) => {
+	app.use(
+		"/__BCPreview/",
+		createProxyMiddleware({
+			target: `http://localhost:8033`,
+			secure: false
+		})
+	);
+};
