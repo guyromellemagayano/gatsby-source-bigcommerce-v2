@@ -1,3 +1,8 @@
-import { sourceNodes } from "./gatsby/sourceNodes";
+"use strict";
 
-export { sourceNodes };
+const { onCreateDevServer, sourceNodes } = require("./gatsby/sourceNodes");
+
+module.exports = {
+	sourceNodes: sourceNodes,
+	onCreateDevServer: onCreateDevServer
+};

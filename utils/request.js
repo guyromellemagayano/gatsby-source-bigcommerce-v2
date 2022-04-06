@@ -166,12 +166,12 @@ var Request = (function () {
 			});
 
 			dataString !== null
-				? function () {
-						console.log(_constants.FG_YELLOW, "\nSending BigCommerce data...");
+				? (function () {
+						console.log(_constants.FG_YELLOW, "\nSending BigCommerce data...\n");
 						console.log(_constants.FG_GREEN, "\n" + ("[" + method.toUpperCase() + "] " + _constants.HTTPS_PROTOCOL + _this.hostname + path) + "\n");
 						req.write(dataString);
-						console.log(_constants.FG_GREEN, "\nSending complete.");
-				  }
+						console.log(_constants.FG_GREEN, "\nSending complete.\n");
+				  })()
 				: null;
 			req.on("error", function (err) {
 				return reject(err);

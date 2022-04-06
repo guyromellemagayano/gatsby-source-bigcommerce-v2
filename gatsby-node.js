@@ -1,8 +1,11 @@
 "use strict";
 
-exports.__esModule = true;
+var _require = require("./gatsby/sourceNodes"),
+	onCreateDevServer = _require.onCreateDevServer,
+	sourceNodes = _require.sourceNodes;
 
-var _sourceNodes = require("./gatsby/sourceNodes");
-
-exports.sourceNodes = _sourceNodes.sourceNodes;
+module.exports = {
+	sourceNodes: sourceNodes,
+	onCreateDevServer: onCreateDevServer
+};
 //# sourceMappingURL=gatsby-node.js.map

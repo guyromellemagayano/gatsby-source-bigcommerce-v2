@@ -9,3 +9,4 @@ constants/
 gatsby/
 utils/
 node_modules/
+!src/**/*

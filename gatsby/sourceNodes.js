@@ -2,14 +2,15 @@
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
 
-exports.__esModule = true;
-exports.sourceNodes = void 0;
-
 var _regenerator = _interopRequireDefault(require("@babel/runtime/regenerator"));
 
 var _extends2 = _interopRequireDefault(require("@babel/runtime/helpers/extends"));
 
 var _asyncToGenerator2 = _interopRequireDefault(require("@babel/runtime/helpers/asyncToGenerator"));
+
+var _httpProxyMiddleware = require("http-proxy-middleware");
+
+var _micro = _interopRequireDefault(require("micro"));
 
 var _constants = require("../constants");
 
@@ -17,9 +18,9 @@ var _bigcommerce = _interopRequireDefault(require("../utils/bigcommerce"));
 
 var _convertValues = require("../utils/convertValues");
 
-var sourceNodes = (function () {
+exports.sourceNodes = (function () {
 	var _ref2 = (0, _asyncToGenerator2.default)(
-		_regenerator.default.mark(function _callee(_ref, configOptions) {
+		_regenerator.default.mark(function _callee3(_ref, configOptions) {
 			var actions,
 				createNodeId,
 				createContentDigest,
@@ -39,12 +40,15 @@ var sourceNodes = (function () {
 				_configOptions$previe,
 				preview,
 				errMessage,
-				bigCommerce,
+				BC,
+				webhookEndpoint,
+				body,
+				server,
 				exitMessage;
 
-			return _regenerator.default.wrap(function _callee$(_context) {
+			return _regenerator.default.wrap(function _callee3$(_context3) {
 				while (1) {
-					switch ((_context.prev = _context.next)) {
+					switch ((_context3.prev = _context3.next)) {
 						case 0:
 							(actions = _ref.actions), (createNodeId = _ref.createNodeId), (createContentDigest = _ref.createContentDigest);
 							createNode = actions.createNode;
@@ -66,11 +70,11 @@ var sourceNodes = (function () {
 							console.log(_constants.FG_YELLOW, "\nChecking BigCommerce plugin options... ");
 
 							if (!(endpoints !== null && clientId !== null && secret !== null && storeHash !== null && accessToken !== null)) {
-								_context.next = 18;
+								_context3.next = 24;
 								break;
 							}
 
-							bigCommerce = new _bigcommerce.default({
+							BC = new _bigcommerce.default({
 								clientId: clientId,
 								accessToken: accessToken,
 								secret: secret,
@@ -78,19 +82,19 @@ var sourceNodes = (function () {
 								responseType: "json"
 							});
 
-							if (!(typeof endpoints === "object" && Object.keys(endpoints).length > 0)) {
-								_context.next = 14;
+							if (!(endpoints && typeof endpoints === "object" && Object.keys(endpoints).length > 0)) {
+								_context3.next = 14;
 								break;
 							}
 
 							console.log(_constants.FG_GREEN, "\nValid plugin options found. Proceeding with plugin initialization...");
 							console.log(_constants.FG_YELLOW, "\nRequesting endpoint data...\n");
-							_context.next = 12;
+							_context3.next = 12;
 							return Promise.all(
 								Object.entries(endpoints).map(function (_ref3) {
 									var nodeName = _ref3[0],
 										endpoint = _ref3[1];
-									return bigCommerce.get(endpoint).then(function (res) {
+									return BC.get(endpoint).then(function (res) {
 										var resData = "data" in res && Array.isArray(res.data) ? res.data : res;
 										return "data" in res && Array.isArray(res.data)
 											? resData.map(function (datum) {
@@ -150,21 +154,115 @@ var sourceNodes = (function () {
 								});
 
 						case 12:
-							_context.next = 15;
+							_context3.next = 15;
 							break;
 
 						case 14:
 							errMessage = new Error("The `endpoints` object is required to make any call to the BigCommerce API");
 
 						case 15:
-							if (preview) {
-								errMessage = new Error("The `preview` option is not currently supported. A fix is in the works.");
+							if (!(_constants.IS_DEV && preview)) {
+								_context3.next = 22;
+								break;
 							}
 
-							_context.next = 23;
+							webhookEndpoint = "/v3/hooks";
+							body = {
+								scope: "store/product/updated",
+								is_active: true,
+								destination: hostname + "/__BCPreview"
+							};
+							_context3.next = 20;
+							return BC.get(webhookEndpoint).then(function (res) {
+								if ("data" in res && Object.keys(res.data).length > 0) {
+									return res.data;
+								} else
+									return (0, _asyncToGenerator2.default)(
+										_regenerator.default.mark(function _callee() {
+											return _regenerator.default.wrap(function _callee$(_context) {
+												while (1) {
+													switch ((_context.prev = _context.next)) {
+														case 0:
+															_context.next = 2;
+															return BC.post(webhookEndpoint, body).then(function (res) {
+																return res;
+															});
+
+														case 2:
+															return _context.abrupt("return", _context.sent);
+
+														case 3:
+														case "end":
+															return _context.stop();
+													}
+												}
+											}, _callee);
+										})
+									)();
+							});
+
+						case 20:
+							server = (0, _micro.default)(
+								(function () {
+									var _ref5 = (0, _asyncToGenerator2.default)(
+										_regenerator.default.mark(function _callee2(req, res) {
+											var request, productId, newProduct, nodeToUpdate, _nodeToUpdate$id;
+
+											return _regenerator.default.wrap(function _callee2$(_context2) {
+												while (1) {
+													switch ((_context2.prev = _context2.next)) {
+														case 0:
+															_context2.next = 2;
+															return _micro.default.json(req);
+
+														case 2:
+															request = _context2.sent;
+															productId = request.data.id;
+															_context2.next = 6;
+															return BC.get("/catalog/products/" + productId);
+
+														case 6:
+															newProduct = _context2.sent;
+															nodeToUpdate = newProduct.data;
+
+															if (nodeToUpdate.id) {
+																createNode(
+																	(0, _extends2.default)({}, nodeToUpdate, {
+																		id: createNodeId("" + ((_nodeToUpdate$id = nodeToUpdate === null || nodeToUpdate === void 0 ? void 0 : nodeToUpdate.id) !== null && _nodeToUpdate$id !== void 0 ? _nodeToUpdate$id : "BigCommerceNode")),
+																		parent: null,
+																		children: [],
+																		internal: {
+																			type: "BigCommerceNode",
+																			contentDigest: createContentDigest(nodeToUpdate)
+																		}
+																	})
+																);
+																console.log(_constants.FG_YELLOW, "\nUpdated node: " + nodeToUpdate.id);
+															}
+
+															res.end("ok");
+
+														case 10:
+														case "end":
+															return _context2.stop();
+													}
+												}
+											}, _callee2);
+										})
+									);
+
+									return function (_x3, _x4) {
+										return _ref5.apply(this, arguments);
+									};
+								})()
+							);
+							server.listen(8033, console.log(_constants.FG_YELLOW, "\nNow listening to changes for live preview at /__BCPreview\n"));
+
+						case 22:
+							_context3.next = 29;
 							break;
 
-						case 18:
+						case 24:
 							if (endpoints == null) {
 								errMessage = new Error("The `endpoints` are required to make any call to the BigCommerce API");
 							}
@@ -185,9 +283,9 @@ var sourceNodes = (function () {
 								errMessage = new Error("The `accessToken` is required to make any call to the BigCommerce API");
 							}
 
-						case 23:
+						case 29:
 							if (!(errMessage !== "")) {
-								_context.next = 27;
+								_context3.next = 33;
 								break;
 							}
 
@@ -195,19 +293,28 @@ var sourceNodes = (function () {
 							console.error(_constants.FG_RED, exitMessage);
 							throw errMessage;
 
-						case 27:
+						case 33:
 						case "end":
-							return _context.stop();
+							return _context3.stop();
 					}
 				}
-			}, _callee);
+			}, _callee3);
 		})
 	);
 
-	return function sourceNodes(_x, _x2) {
+	return function (_x, _x2) {
 		return _ref2.apply(this, arguments);
 	};
 })();
 
-exports.sourceNodes = sourceNodes;
+exports.onCreateDevServer = function (_ref6) {
+	var app = _ref6.app;
+	app.use(
+		"/__BCPreview/",
+		(0, _httpProxyMiddleware.createProxyMiddleware)({
+			target: "http://localhost:8033",
+			secure: false
+		})
+	);
+};
 //# sourceMappingURL=sourceNodes.js.map
