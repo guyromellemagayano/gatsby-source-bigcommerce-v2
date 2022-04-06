@@ -158,8 +158,8 @@ var Request = function () {
       });
 
       dataString !== null ? function () {
-        console.log(_constants.FG_YELLOW, "\nSending BigCommerce data...");
-        console.log(_constants.FG_GREEN, "\n" + ("[" + method.toUpperCase() + "] " + _constants.HTTPS_PROTOCOL + _this.hostname + path));
+        console.log(_constants.FG_YELLOW, "\nSending BigCommerce data...\n");
+        console.log(_constants.FG_GREEN, "\n" + ("[" + method.toUpperCase() + "] " + _constants.HTTPS_PROTOCOL + _this.hostname + path) + "\n");
         req.write(dataString);
         console.log(_constants.FG_GREEN, "\nSending complete.\n");
       }() : null;

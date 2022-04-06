@@ -108,38 +108,40 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, con
 				destination: `${hostname}/__BCPreview`
 			};
 
-			BC.post(webhookEndpoint, body).then((res) => {
-				if ("data" in res && Array.isArray(res.data)) {
-					const server = micro(async (req, res) => {
-						const request = await micro.json(req);
-						const productId = request.data.id;
+			await BC.get(webhookEndpoint).then((res) => {
+				if ("data" in res && Object.keys(res.data).length > 0) {
+					return res.data;
+				} else return (async () => await BC.post(webhookEndpoint, body).then((res) => res))();
+			});
 
-						// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
-						const newProduct = await BC.get(`/catalog/products/${productId}`);
-						const nodeToUpdate = newProduct.data;
+			const server = micro(async (req, res) => {
+				const request = await micro.json(req);
+				const productId = request.data.id;
 
-						if (nodeToUpdate.id) {
-							createNode({
-								...nodeToUpdate,
-								id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
-								parent: null,
-								children: [],
-								internal: {
-									type: `BigCommerceNode`,
-									contentDigest: createContentDigest(nodeToUpdate)
-								}
-							});
+				// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
+				const newProduct = await BC.get(`/catalog/products/${productId}`);
+				const nodeToUpdate = newProduct.data;
 
-							console.log(FG_YELLOW, `\nUpdated node: ${nodeToUpdate.id}`);
+				if (nodeToUpdate.id) {
+					createNode({
+						...nodeToUpdate,
+						id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
+						parent: null,
+						children: [],
+						internal: {
+							type: `BigCommerceNode`,
+							contentDigest: createContentDigest(nodeToUpdate)
 						}
-
-						// Send a response back to the BigCommerce API
-						res.end("ok");
 					});
 
-					server.listen(8033, console.log(FG_YELLOW, `\nNow listening to changes for live preview at route /__BCPreview\n`));
+					console.log(FG_YELLOW, `\nUpdated node: ${nodeToUpdate.id}`);
 				}
+
+				// Send a response back to the BigCommerce API
+				res.end("ok");
 			});
+
+			server.listen(8033, console.log(FG_YELLOW, `\nNow listening to changes for live preview at /__BCPreview\n`));
 		}
 	} else {
 		// If `endpoints` is null, throw an error

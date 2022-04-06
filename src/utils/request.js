@@ -155,10 +155,10 @@ class Request {
 			dataString !== null
 				? (() => {
 						// Send log message when sending data
-						console.log(FG_YELLOW, "\nSending BigCommerce data...");
+						console.log(FG_YELLOW, "\nSending BigCommerce data...\n");
 
 						// Send log message when requesting data
-						console.log(FG_GREEN, `\n${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}`);
+						console.log(FG_GREEN, `\n${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}\n`);
 
 						req.write(dataString);
 
