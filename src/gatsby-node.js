@@ -3,6 +3,6 @@
 const { onCreateDevServer, sourceNodes } = require("./gatsby/sourceNodes");
 
 module.exports = {
-	onCreateDevServer: onCreateDevServer,
-	sourceNodes: sourceNodes
+	sourceNodes: sourceNodes,
+	onCreateDevServer: onCreateDevServer
 };

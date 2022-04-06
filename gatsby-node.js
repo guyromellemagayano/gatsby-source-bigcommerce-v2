@@ -5,7 +5,7 @@ var _require = require("./gatsby/sourceNodes"),
 	sourceNodes = _require.sourceNodes;
 
 module.exports = {
-	onCreateDevServer: onCreateDevServer,
-	sourceNodes: sourceNodes
+	sourceNodes: sourceNodes,
+	onCreateDevServer: onCreateDevServer
 };
 //# sourceMappingURL=gatsby-node.js.map
