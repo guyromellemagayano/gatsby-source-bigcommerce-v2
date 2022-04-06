@@ -8,7 +8,7 @@ This official source plugin makes BigCommerce API data available in GatsbyJS sit
 
 - Support for both `v2` and `v3` BigCommerce API versions
 - `preview` mode for testing BigCommerce webhooks
-- Verbose logging of endpoint requests
+- Log level options for BigCommerce endpoint requests
 
 ## Installation and Setup
 
@@ -28,7 +28,11 @@ Setup this plugin in `gatsby-config.js` as follows:
 
 ```javascript
 module.exports = {
+	// ...
+
 	plugins: [
+		// ...
+
 		{
 			resolve: "@epicdesignlabs/gatsby-source-bigcommerce",
 			options: {
@@ -41,7 +45,10 @@ module.exports = {
 					BigCommerceCategories: "/v3/catalog/categories",
 					BigCommerceCategoriesTree: "/v3/catalog/categories/tree",
 					BigCommerceBrands: "/v3/catalog/brands"
-				}
+				},
+				logLevel: "info",
+				preview: true;
+				siteUrl: "https://example.com";
 			}
 		}
 	]
@@ -54,15 +61,8 @@ Add a single or multiple `endpoints`. You can find a list of endpoints [here](ht
 
 ```javascript
 options: {
-	...
+	// ...
 
-	// Required fields
-	clientId: process.env.BIGCOMMERCE_API_CLIENT_ID,
-	secret: process.env.BIGCOMMERCE_API_SECRET,
-	accessToken: process.env.BIGCOMMERCE_API_ACCESS_TOKEN,
-	storeHash: process.env.BIGCOMMERCE_API_STORE_HASH,
-
-	// Create a node name and map it to a valid `bigcommerce` endpoint
 	endpoints: {
 		// Single endpoint
 		BigCommerceProducts: "/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos",
@@ -127,19 +127,23 @@ you can query the data as follows:
 
 ## Preview (Beta)
 
-To properly enable preview mode, deploy a site instance in the server (\*currently supports **Netlify**, **Vercel**, and **Gatsby Cloud\***), get your preview URL and add it under the key `hostname` and set the `preview` mode to `true` to options as shown
+To properly enable preview mode, deploy a site instance in the server (\*currently supports **Netlify**, **Vercel**, and **Gatsby Cloud\***), get your preview URL and add it under the key `siteUrl` and set the `preview` mode to `true` to options as shown
 
 ```javascript
 options: {
 	preview: true;
-	hostname: "https://example.com";
+	siteUrl: "https://example.com";
 }
 ```
 
 ## Work in Progress
 
-- [ ] Add support for optional verbose logging
-- [x] Enhanced `preview` mode support (Netlify, Vercel, Gatsby Cloud, etc.)
+- [x] Support for optional verbose logging levels (info, error, etc.)
+- [x] Enhanced `preview` mode support (**Netlify**, **Vercel**, **Gatsby Cloud**, etc.)
+- [ ] Support for `HTTP` methods other than `GET` (`POST`, `PUT`, `DELETE`)
+- [ ] Support for authentication, loading and uninstalling BigCommerce endpoints
+- [ ] Debug option for Bigcommerce endpoints
+- [ ] Response type selection for Bigcommerce endpoints
 
 ## Author
 
@@ -151,4 +155,4 @@ Released under the [MIT license](LICENSE).
 
 ## Credits
 
-Thanks to all the contributors of the original plugin [gatsby-source-bigcommerce](https://github.com/thirdandgrove/gatsby-source-bigcommerce) for the great work. 🎉
+Thanks to all the contributors of the original plugin [gatsby-source-bigcommerce](https://github.com/thirdandgrove/gatsby-source-bigcommerce) and [node-bigcommerce](https://github.com/getconversio/node-bigcommerce) for the great work. 🎉
