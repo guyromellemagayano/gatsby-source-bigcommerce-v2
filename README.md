@@ -7,6 +7,8 @@ This official source plugin makes BigCommerce API data available in GatsbyJS sit
 ## Features
 
 - Support for both `v2` and `v3` BigCommerce API versions
+- `preview` mode for testing BigCommerce webhooks
+- Verbose logging of endpoint requests
 
 ## Installation and Setup
 
@@ -123,15 +125,21 @@ you can query the data as follows:
 }
 ```
 
-## GraphQL
+## Preview (Beta)
 
-- You can access the GraphQL Playground by visiting `localhost:8000/__graphql`, assuming you already run your `gatsby` site.
+To properly enable preview mode, deploy a site instance in the server (\*currently supports **Netlify**, **Vercel**, and **Gatsby Cloud\***), get your preview URL and add it under the key `hostname` and set the `preview` mode to `true` to options as shown
+
+```javascript
+options: {
+	preview: true;
+	hostname: "https://example.com";
+}
+```
 
 ## Work in Progress
 
-- [ ] Add support for [Gatsby Cloud](https://www.gatsbyjs.com/products/cloud/)
 - [ ] Add support for optional verbose logging
-- [ ] Enhanced `preview` mode support (Netlify, Vercel, Gatsby Cloud, etc.)
+- [x] Enhanced `preview` mode support (Netlify, Vercel, Gatsby Cloud, etc.)
 
 ## Author
 
