@@ -182,17 +182,13 @@ you can query the data as follows:
 }
 ```
 
-## BigCommerce API Documentation
-
-[Go Here](https://developer.bigcommerce.com/api-reference/v3/)
-
 ## Contributing
 
 Please feel free to contribute! PRs are always welcome.
 
 ## License
 
-This source code is licensed under the `MIT` license found in the LICENSE file in the root directory of this source tree.
+This source code is licensed under the **MIT** license found in the [LICENSE](LICENSE) file in the root directory of this source tree.
 
 ## Work in Progress
 
