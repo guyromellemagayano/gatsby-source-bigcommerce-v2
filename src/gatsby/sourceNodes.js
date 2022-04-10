@@ -26,14 +26,14 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, con
 		colors: {
 			error: "bold red",
 			debug: "bold blue",
-			info: "bold info"
+			info: "bold gray"
 		}
 	};
 
-	const { combine, timestamp, colorize, simple } = format;
-
 	// Add console colors
 	addColors(logLevels.colors);
+
+	const { combine, timestamp, colorize, simple } = format;
 
 	// Init `winston` logger
 	const logger = createLogger({
