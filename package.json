@@ -1,6 +1,6 @@
 {
 	"name": "@epicdesignlabs/gatsby-source-bigcommerce",
-	"version": "1.1.0",
+	"version": "2.0.0-0",
 	"description": "This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
 	"scripts": {
 		"build": "babel src --out-dir ./ --source-maps",
