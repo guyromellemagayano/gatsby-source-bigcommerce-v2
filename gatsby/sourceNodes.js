@@ -43,11 +43,11 @@ exports.sourceNodes = function () {
               colors: {
                 error: "bold red",
                 debug: "bold blue",
-                info: "bold info"
+                info: "bold gray"
               }
             };
-            combine = _winston.format.combine, timestamp = _winston.format.timestamp, colorize = _winston.format.colorize, simple = _winston.format.simple;
             (0, _winston.addColors)(logLevels.colors);
+            combine = _winston.format.combine, timestamp = _winston.format.timestamp, colorize = _winston.format.colorize, simple = _winston.format.simple;
             logger = (0, _winston.createLogger)({
               level: sanitizedLogLevel,
               levels: logLevels.levels,
