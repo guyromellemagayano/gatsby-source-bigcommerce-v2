@@ -21,14 +21,12 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, con
 		levels: {
 			error: 0,
 			debug: 1,
-			warn: 2,
-			info: 4
+			info: 2
 		},
 		colors: {
 			error: "bold red",
 			debug: "bold blue",
-			warn: "bold yellow",
-			info: "bold green"
+			info: "bold info"
 		}
 	};
 

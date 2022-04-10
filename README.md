@@ -7,7 +7,7 @@ This official source plugin makes BigCommerce API data available in GatsbyJS sit
 ## Features
 
 - Support for both `v2` and `v3` BigCommerce API versions
-- Enhanced `preview` mode for testing BigCommerce webhooks. Currently supports **Netlify**, **Vercel**, and **Gatsby Cloud**
+- Enhanced `preview` mode for testing BigCommerce webhooks. Currently supports [**Netlify**](https://www.netlify.com/), [**Vercel**](https://vercel.com/), and [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
 - Log level options for BigCommerce endpoint requests (`error`, `debug`, `info`)
 - Response type selection for Bigcommerce endpoints
 - Support for additional headers
@@ -118,8 +118,16 @@ Add additional headers to the request as follows:
 options: {
 	// ...
 
+
 	headers: {
-		"X-Custom-Header": "Custom Value"
+		// Single	header
+		"X-Custom-Header": "Custom Value",
+
+		// Mutiple headers
+		"Access-Control-Allow-Headers": "Custom Value",
+		"Access-Control-Allow-Credentials": "Custom Value",
+		"Access-Control-Allow-Origin": "Custom Value",
+		"Access-Control-Allow-Methods": "Custom Value"
 	}
 }
 ```

@@ -38,14 +38,12 @@ exports.sourceNodes = function () {
               levels: {
                 error: 0,
                 debug: 1,
-                warn: 2,
-                info: 4
+                info: 2
               },
               colors: {
                 error: "bold red",
                 debug: "bold blue",
-                warn: "bold yellow",
-                info: "bold green"
+                info: "bold info"
               }
             };
             combine = _winston.format.combine, timestamp = _winston.format.timestamp, colorize = _winston.format.colorize, simple = _winston.format.simple;
