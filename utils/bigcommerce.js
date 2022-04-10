@@ -20,7 +20,7 @@ var _request2 = _interopRequireDefault(require("./request"));
 var BigCommerce = function () {
   function BigCommerce(config) {
     if (!config) {
-      var errMessage = new Error("Config missing. The config object is required to make any call to the " + "BigCommerce API");
+      var errMessage = new Error("Config missing. The config object is required to make any call to the BigCommerce API");
       throw errMessage;
     }
 
@@ -31,14 +31,14 @@ var BigCommerce = function () {
   var _proto = BigCommerce.prototype;
 
   _proto.createAPIRequest = function createAPIRequest(endpoint) {
-    var acceptHeader = this.config.responseType === "xml" ? "application/xml" : "application/json";
+    var accept = this.config.responseType === "xml" ? "application/xml" : "application/json";
     return new _request2.default(endpoint, {
       headers: Object.assign({
-        "Accept": acceptHeader,
+        "Accept": accept,
         "X-Auth-Client": this.config.clientId,
         "X-Auth-Token": this.config.accessToken
-      }),
-      failOnLimitReached: this.config.failOnLimitReached,
+      }, this.config.headers),
+      logger: this.config.logger,
       agent: this.config.agent
     });
   };
@@ -50,18 +50,18 @@ var BigCommerce = function () {
         while (1) {
           switch (_context.prev = _context.next) {
             case 0:
-              !signedRequest ? console.error(_constants.FG_RED, "The signed request is required to verify the call.") : null;
+              !signedRequest ? this.config.logger.error("The signed request is required to verify the call.") : null;
               splitRequest = signedRequest.split(".");
-              splitRequest.length < 2 ? console.error(_constants.FG_RED, "The signed request will come in two parts seperated by a .(full stop). " + "this signed request contains less than 2 parts.") : null;
+              splitRequest.length < 2 ? this.config.logger.error("The signed request will come in two parts seperated by a .(full stop). " + "this signed request contains less than 2 parts.") : null;
               signature = Buffer.from(splitRequest[1], "base64").toString("utf8");
               json = Buffer.from(splitRequest[0], "base64").toString("utf8");
               data = (0, _convertValues.handleConversionStringToObject)(json);
               expected = _crypto.default.createHmac("sha256", this.config.secret).update(json).digest("hex");
-              console.log(_constants.FG_BLUE, "\nJSON: " + json);
-              console.log(_constants.FG_BLUE, "\nSIGNATURE: " + signature);
-              console.log(_constants.FG_BLUE, "\nEXPECTED SIGNATURE: " + expected);
-              expected.length !== signature.length || _crypto.default.timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(signature, "utf8")) ? console.error(_constants.FG_RED, "The signature is invalid.") : null;
-              console.log(_constants.FG_GREEN, "The signature is valid.");
+              this.config.logger.info("JSON: " + json);
+              this.config.logger.info("SIGNATURE: " + signature);
+              this.config.logger.info("EXPECTED SIGNATURE: " + expected);
+              expected.length !== signature.length || _crypto.default.timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(signature, "utf8")) ? this.config.logger.error("The signature is invalid.") : null;
+              this.config.logger.info("The signature is valid.");
               return _context.abrupt("return", data);
 
             case 13:
@@ -87,7 +87,7 @@ var BigCommerce = function () {
         while (1) {
           switch (_context2.prev = _context2.next) {
             case 0:
-              !query ? console.error(_constants.FG_RED, "The URL query paramaters are required.") : null;
+              !query ? this.config.logger.error("The URL query paramaters are required.") : null;
               _context2.next = 3;
               return query;
 
@@ -142,8 +142,8 @@ var BigCommerce = function () {
                 data = null;
               }
 
-              this.config.accessToken == null ? console.error(_constants.FG_RED, "The access token is required to make BigCommerce API requests.") : null;
-              this.config.storeHash == null ? console.error(_constants.FG_RED, "The store hash is required to make BigCommerce API requests.") : null;
+              this.config.accessToken == null ? this.config.logger.error("The access token is required to make BigCommerce API requests.") : null;
+              this.config.storeHash == null ? this.config.logger.error("The store hash is required to make BigCommerce API requests.") : null;
               extension = this.config.responseType === "xml" ? ".xml" : "";
               request = this.createAPIRequest(_constants.REQUEST_BIGCOMMERCE_API_URL);
               version = !path.includes("v3") ? path.replace(/(\?|$)/, extension + "$1") : path;

@@ -12,6 +12,8 @@ var _httpProxyMiddleware = require("http-proxy-middleware");
 
 var _micro = _interopRequireDefault(require("micro"));
 
+var _winston = require("winston");
+
 var _constants = require("../constants");
 
 var _bigcommerce = _interopRequireDefault(require("../utils/bigcommerce"));
@@ -20,7 +22,7 @@ var _convertValues = require("../utils/convertValues");
 
 exports.sourceNodes = function () {
   var _ref2 = (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee3(_ref, configOptions) {
-    var actions, createNodeId, createContentDigest, createNode, _configOptions$endpoi, endpoints, _configOptions$client, clientId, _configOptions$secret, secret, _configOptions$storeH, storeHash, _configOptions$access, accessToken, _configOptions$hostna, hostname, _configOptions$previe, preview, errMessage, BC, webhookEndpoint, body, server, exitMessage;
+    var actions, createNodeId, createContentDigest, createNode, _configOptions$endpoi, endpoints, _configOptions$client, clientId, _configOptions$secret, secret, _configOptions$storeH, storeHash, _configOptions$access, accessToken, _configOptions$siteUr, siteUrl, _configOptions$previe, preview, _configOptions$logLev, logLevel, _configOptions$agent, agent, _configOptions$respon, responseType, _configOptions$header, headers, sanitizedSiteUrl, sanitizedLogLevel, sanitizeResponseType, logLevels, combine, timestamp, colorize, simple, logger, errMessage, BC, webhookEndpoint, body, server, exitMessage;
 
     return _regenerator.default.wrap(function _callee3$(_context3) {
       while (1) {
@@ -28,12 +30,37 @@ exports.sourceNodes = function () {
           case 0:
             actions = _ref.actions, createNodeId = _ref.createNodeId, createContentDigest = _ref.createContentDigest;
             createNode = actions.createNode;
-            _configOptions$endpoi = configOptions.endpoints, endpoints = _configOptions$endpoi === void 0 ? null : _configOptions$endpoi, _configOptions$client = configOptions.clientId, clientId = _configOptions$client === void 0 ? null : _configOptions$client, _configOptions$secret = configOptions.secret, secret = _configOptions$secret === void 0 ? null : _configOptions$secret, _configOptions$storeH = configOptions.storeHash, storeHash = _configOptions$storeH === void 0 ? null : _configOptions$storeH, _configOptions$access = configOptions.accessToken, accessToken = _configOptions$access === void 0 ? null : _configOptions$access, _configOptions$hostna = configOptions.hostname, hostname = _configOptions$hostna === void 0 ? null : _configOptions$hostna, _configOptions$previe = configOptions.preview, preview = _configOptions$previe === void 0 ? false : _configOptions$previe;
+            _configOptions$endpoi = configOptions.endpoints, endpoints = _configOptions$endpoi === void 0 ? null : _configOptions$endpoi, _configOptions$client = configOptions.clientId, clientId = _configOptions$client === void 0 ? null : _configOptions$client, _configOptions$secret = configOptions.secret, secret = _configOptions$secret === void 0 ? null : _configOptions$secret, _configOptions$storeH = configOptions.storeHash, storeHash = _configOptions$storeH === void 0 ? null : _configOptions$storeH, _configOptions$access = configOptions.accessToken, accessToken = _configOptions$access === void 0 ? null : _configOptions$access, _configOptions$siteUr = configOptions.siteUrl, siteUrl = _configOptions$siteUr === void 0 ? null : _configOptions$siteUr, _configOptions$previe = configOptions.preview, preview = _configOptions$previe === void 0 ? false : _configOptions$previe, _configOptions$logLev = configOptions.logLevel, logLevel = _configOptions$logLev === void 0 ? "info" : _configOptions$logLev, _configOptions$agent = configOptions.agent, agent = _configOptions$agent === void 0 ? null : _configOptions$agent, _configOptions$respon = configOptions.responseType, responseType = _configOptions$respon === void 0 ? "json" : _configOptions$respon, _configOptions$header = configOptions.headers, headers = _configOptions$header === void 0 ? {} : _configOptions$header;
+            sanitizedSiteUrl = (0, _convertValues.handleConversionStringToLowercase)(siteUrl);
+            sanitizedLogLevel = (0, _convertValues.handleConversionStringToLowercase)(logLevel);
+            sanitizeResponseType = (0, _convertValues.handleConversionStringToLowercase)(responseType);
+            logLevels = {
+              levels: {
+                error: 0,
+                debug: 1,
+                warn: 2,
+                info: 4
+              },
+              colors: {
+                error: "bold red",
+                debug: "bold blue",
+                warn: "bold yellow",
+                info: "bold green"
+              }
+            };
+            combine = _winston.format.combine, timestamp = _winston.format.timestamp, colorize = _winston.format.colorize, simple = _winston.format.simple;
+            (0, _winston.addColors)(logLevels.colors);
+            logger = (0, _winston.createLogger)({
+              level: sanitizedLogLevel,
+              levels: logLevels.levels,
+              format: combine(colorize(), simple(), timestamp()),
+              transports: [new _winston.transports.Console()]
+            });
             errMessage = "";
-            console.log(_constants.FG_YELLOW, "\nChecking BigCommerce plugin options... ");
+            logger.info("Checking BigCommerce plugin options... ");
 
             if (!(endpoints !== null && clientId !== null && secret !== null && storeHash !== null && accessToken !== null)) {
-              _context3.next = 24;
+              _context3.next = 31;
               break;
             }
 
@@ -42,17 +69,20 @@ exports.sourceNodes = function () {
               accessToken: accessToken,
               secret: secret,
               storeHash: storeHash,
-              responseType: "json"
+              responseType: sanitizeResponseType,
+              logger: logger,
+              agent: agent,
+              headers: headers
             });
 
             if (!(endpoints && typeof endpoints === "object" && Object.keys(endpoints).length > 0)) {
-              _context3.next = 14;
+              _context3.next = 21;
               break;
             }
 
-            console.log(_constants.FG_GREEN, "\nValid plugin options found. Proceeding with plugin initialization...");
-            console.log(_constants.FG_YELLOW, "\nRequesting endpoint data...\n");
-            _context3.next = 12;
+            logger.info("Valid plugin options found. Proceeding with plugin initialization...");
+            logger.info("Requesting endpoint data...");
+            _context3.next = 19;
             return Promise.all(Object.entries(endpoints).map(function (_ref3) {
               var nodeName = _ref3[0],
                   endpoint = _ref3[1];
@@ -94,23 +124,23 @@ exports.sourceNodes = function () {
                 }));
               });
             })).then(function () {
-              console.log(_constants.FG_GREEN, "\nAll endpoint data have been fetched successfully.");
+              logger.info("All endpoint data have been fetched successfully.");
             }).catch(function (err) {
               errMessage = new Error("An error occurred while fetching endpoint data. " + err);
             }).finally(function () {
-              return console.log(_constants.FG_YELLOW, "\nRequesting endpoint data complete.\n");
+              return logger.info("Requesting endpoint data complete.");
             });
 
-          case 12:
-            _context3.next = 15;
+          case 19:
+            _context3.next = 22;
             break;
 
-          case 14:
+          case 21:
             errMessage = new Error("The `endpoints` object is required to make any call to the BigCommerce API");
 
-          case 15:
-            if (!(_constants.IS_DEV && preview)) {
-              _context3.next = 22;
+          case 22:
+            if (!(_constants.IS_DEV && preview && sanitizedSiteUrl !== null)) {
+              _context3.next = 29;
               break;
             }
 
@@ -118,9 +148,9 @@ exports.sourceNodes = function () {
             body = {
               scope: "store/product/updated",
               is_active: true,
-              destination: hostname + "/__BCPreview"
+              destination: sanitizedSiteUrl + "/__BCPreview"
             };
-            _context3.next = 20;
+            _context3.next = 27;
             return BC.get(webhookEndpoint).then(function (res) {
               if ("data" in res && Object.keys(res.data).length > 0) {
                 return res.data;
@@ -146,7 +176,7 @@ exports.sourceNodes = function () {
               }))();
             });
 
-          case 20:
+          case 27:
             server = (0, _micro.default)(function () {
               var _ref5 = (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee2(req, res) {
                 var request, productId, newProduct, nodeToUpdate, _nodeToUpdate$id;
@@ -178,7 +208,7 @@ exports.sourceNodes = function () {
                               contentDigest: createContentDigest(nodeToUpdate)
                             }
                           }));
-                          console.log(_constants.FG_YELLOW, "\nUpdated node: " + nodeToUpdate.id);
+                          logger.info("Updated node: " + nodeToUpdate.id);
                         }
 
                         res.end("ok");
@@ -195,13 +225,13 @@ exports.sourceNodes = function () {
                 return _ref5.apply(this, arguments);
               };
             }());
-            server.listen(8033, console.log(_constants.FG_YELLOW, "\nNow listening to changes for live preview at /__BCPreview\n"));
+            server.listen(8033, logger.info("Now listening to changes for live preview at /__BCPreview"));
 
-          case 22:
-            _context3.next = 29;
+          case 29:
+            _context3.next = 36;
             break;
 
-          case 24:
+          case 31:
             if (endpoints == null) {
               errMessage = new Error("The `endpoints` are required to make any call to the BigCommerce API");
             }
@@ -222,17 +252,17 @@ exports.sourceNodes = function () {
               errMessage = new Error("The `accessToken` is required to make any call to the BigCommerce API");
             }
 
-          case 29:
+          case 36:
             if (!(errMessage !== "")) {
-              _context3.next = 33;
+              _context3.next = 40;
               break;
             }
 
-            exitMessage = "\nPlugin terminated with errors...\n";
-            console.error(_constants.FG_RED, exitMessage);
+            exitMessage = "Plugin terminated with errors...";
+            logger.error("" + exitMessage);
             throw errMessage;
 
-          case 33:
+          case 40:
           case "end":
             return _context3.stop();
         }

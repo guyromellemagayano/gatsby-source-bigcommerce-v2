@@ -1,36 +1,74 @@
+/* eslint-disable no-undef */
 "use strict";
 
 import { createProxyMiddleware } from "http-proxy-middleware";
 import micro from "micro";
-import { FG_GREEN, FG_RED, FG_YELLOW, IS_DEV } from "../constants";
+import { addColors, createLogger, format, transports } from "winston";
+import { IS_DEV } from "../constants";
 import BigCommerce from "../utils/bigcommerce";
-import { handleConversionObjectToString } from "../utils/convertValues";
+import { handleConversionObjectToString, handleConversionStringToLowercase } from "../utils/convertValues";
 
 exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, configOptions) => {
 	const { createNode } = actions;
-	const { endpoints = null, clientId = null, secret = null, storeHash = null, accessToken = null, hostname = null, preview = false } = configOptions;
+	const { endpoints = null, clientId = null, secret = null, storeHash = null, accessToken = null, siteUrl = null, preview = false, logLevel = "info", agent = null, responseType = "json", headers = {} } = configOptions;
+
+	const sanitizedSiteUrl = handleConversionStringToLowercase(siteUrl);
+	const sanitizedLogLevel = handleConversionStringToLowercase(logLevel);
+	const sanitizeResponseType = handleConversionStringToLowercase(responseType);
+
+	// Add custom log levels
+	const logLevels = {
+		levels: {
+			error: 0,
+			debug: 1,
+			warn: 2,
+			info: 4
+		},
+		colors: {
+			error: "bold red",
+			debug: "bold blue",
+			warn: "bold yellow",
+			info: "bold green"
+		}
+	};
+
+	const { combine, timestamp, colorize, simple } = format;
+
+	// Add console colors
+	addColors(logLevels.colors);
+
+	// Init `winston` logger
+	const logger = createLogger({
+		level: sanitizedLogLevel,
+		levels: logLevels.levels,
+		format: combine(colorize(), simple(), timestamp()),
+		transports: [new transports.Console()]
+	});
 
 	// Custom variables
 	let errMessage = "";
 
 	// Send log message when checking for required options
-	console.log(FG_YELLOW, "\nChecking BigCommerce plugin options... ");
+	logger.info("Checking BigCommerce plugin options... ");
 
 	if (endpoints !== null && clientId !== null && secret !== null && storeHash !== null && accessToken !== null) {
 		// Init new `BigCommerce` instance
 		const BC = new BigCommerce({
-			clientId,
-			accessToken,
-			secret,
-			storeHash,
-			responseType: "json"
+			clientId: clientId,
+			accessToken: accessToken,
+			secret: secret,
+			storeHash: storeHash,
+			responseType: sanitizeResponseType,
+			logger: logger,
+			agent: agent,
+			headers: headers
 		});
 
 		// Handle fetching and creating nodes for a single or multiple endpoints
 		if (endpoints && typeof endpoints === "object" && Object.keys(endpoints).length > 0) {
 			// Send log message when fetching data
-			console.log(FG_GREEN, "\nValid plugin options found. Proceeding with plugin initialization...");
-			console.log(FG_YELLOW, "\nRequesting endpoint data...\n");
+			logger.info("Valid plugin options found. Proceeding with plugin initialization...");
+			logger.info("Requesting endpoint data...");
 
 			await Promise.all(
 				Object.entries(endpoints).map(([nodeName, endpoint]) => {
@@ -85,7 +123,7 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, con
 			)
 				.then(() => {
 					// Send log message when all endpoints have been fetched
-					console.log(FG_GREEN, "\nAll endpoint data have been fetched successfully.");
+					logger.info("All endpoint data have been fetched successfully.");
 				})
 				.catch((err) => {
 					// Send log message when an error occurs
@@ -93,19 +131,19 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, con
 				})
 				.finally(() =>
 					// Send log message when fetching data is complete
-					console.log(FG_YELLOW, "\nRequesting endpoint data complete.\n")
+					logger.info("Requesting endpoint data complete.")
 				);
 		} else {
 			errMessage = new Error("The `endpoints` object is required to make any call to the BigCommerce API");
 		}
 
-		if (IS_DEV && preview) {
+		if (IS_DEV && preview && sanitizedSiteUrl !== null) {
 			// Make a `POST` request to the BigCommerce API to subscribe to its webhook
 			const webhookEndpoint = "/v3/hooks";
 			const body = {
 				scope: "store/product/updated",
 				is_active: true,
-				destination: `${hostname}/__BCPreview`
+				destination: `${sanitizedSiteUrl}/__BCPreview`
 			};
 
 			await BC.get(webhookEndpoint).then((res) => {
@@ -134,14 +172,14 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, con
 						}
 					});
 
-					console.log(FG_YELLOW, `\nUpdated node: ${nodeToUpdate.id}`);
+					logger.info(`Updated node: ${nodeToUpdate.id}`);
 				}
 
 				// Send a response back to the BigCommerce API
 				res.end("ok");
 			});
 
-			server.listen(8033, console.log(FG_YELLOW, `\nNow listening to changes for live preview at /__BCPreview\n`));
+			server.listen(8033, logger.info(`Now listening to changes for live preview at /__BCPreview`));
 		}
 	} else {
 		// If `endpoints` is null, throw an error
@@ -171,9 +209,9 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, con
 	}
 
 	if (errMessage !== "") {
-		const exitMessage = "\nPlugin terminated with errors...\n";
+		const exitMessage = "Plugin terminated with errors...";
 
-		console.error(FG_RED, exitMessage);
+		logger.error(`${exitMessage}`);
 
 		throw errMessage;
 	}

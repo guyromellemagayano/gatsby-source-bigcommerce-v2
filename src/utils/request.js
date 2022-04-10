@@ -1,15 +1,16 @@
+/* eslint-disable no-undef */
 "use strict";
 
 import https from "https";
 import zlib from "zlib";
-import { FG_BLUE, FG_CYAN, FG_GREEN, FG_RED, FG_WHITE, FG_YELLOW, HTTPS_PROTOCOL } from "../constants";
+import { HTTPS_PROTOCOL } from "../constants";
 import { handleConversionObjectToString, handleConversionStringToObject, handleConversionStringToUppercase } from "./convertValues";
 
 // Handle parsing the response from the BigCommerce API
-function handleBodyResponse(res, body, resolve, reject) {
+function handleBodyResponse(res, body, resolve, reject, logger) {
 	try {
 		if (!/application\/json/.test(res.headers["content-type"]) || body.trim() === "") {
-			console.error(FG_RED, "\nThe response body from the BigCommerce API is not in JSON format.");
+			logger.error("The response body from the BigCommerce API is not in JSON format.");
 
 			return resolve(body);
 		}
@@ -36,7 +37,7 @@ function handleBodyResponse(res, body, resolve, reject) {
 	}
 }
 class Request {
-	constructor(hostname = null, { headers = {}, failOnLimitReached = false, agent = null } = {}) {
+	constructor(hostname = null, { headers = {}, agent = null, logger = null } = {}) {
 		hostname == null && headers == null
 			? (() => {
 					const errMessage = new Error("The hostname and headers are required to make the call to the server.");
@@ -45,10 +46,18 @@ class Request {
 			  })()
 			: null;
 
+		logger == null
+			? (() => {
+					const errMessage = new Error("The logger is required to make the call to the server. Something is wrong.");
+
+					throw errMessage;
+			  })()
+			: null;
+
 		this.hostname = hostname;
 		this.headers = headers;
-		this.failOnLimitReached = failOnLimitReached;
 		this.agent = agent;
+		this.logger = logger;
 		this.protocol = "https:";
 	}
 
@@ -57,7 +66,7 @@ class Request {
 		const dataString = data !== null ? handleConversionObjectToString(data) : null;
 
 		const options = {
-			path,
+			path: path,
 			protocol: this.protocol,
 			hostname: this.hostname,
 			port: 443,
@@ -82,17 +91,15 @@ class Request {
 		return new Promise((resolve, reject) => {
 			const req = https.request(options, (res) => {
 				// Send log message when requesting data
-				console.log(FG_GREEN, `\n${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}`);
+				this.logger.info(`${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}`);
 
 				if (Math.round(res.statusCode / 100) === 2) {
-					console.log(FG_BLUE, `\nStatus:`, FG_GREEN, `${res.statusCode + " " + res.statusMessage}`);
+					this.logger.debug(`${res.statusCode + " " + res.statusMessage}`);
 				} else if (Math.round(res.statusCode / 100) === 4 || Math.round(res.statusCode / 100) === 5) {
-					console.log(FG_BLUE, `\nStatus:`, FG_RED, `${res.statusCode + " " + res.statusMessage}`);
+					this.logger.debug(`${res.statusCode + " " + res.statusMessage}`);
 				} else {
-					console.log(FG_BLUE, `\nStatus:`, FG_WHITE, `${res.statusCode + " " + res.statusMessage}`);
+					this.logger.debug(`${res.statusCode + " " + res.statusMessage}`);
 				}
-
-				console.log(FG_BLUE, `\nHeaders:`, FG_CYAN, `${handleConversionObjectToString(res.headers)}\n`);
 
 				let body = "";
 
@@ -103,21 +110,19 @@ class Request {
 					if (statusCode === 429) {
 						const xRetryAfterHeader = res?.headers?.["x-retry-after"] ?? null;
 
-						if (this.failOnLimitReached) {
-							if (xRetryAfterHeader !== null) {
-								console.log(FG_RED, `\nThe BigCommerce API rate limit has been reached. Please wait ${xRetryAfterHeader} seconds before making another request.`);
-							}
-
-							return setTimeout(() => {
-								// Send log message when restarting request
-								console.log(FG_YELLOW, "\nRestarting request...");
-
-								// Send log message when restarting request
-								console.log(FG_GREEN, `\n${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}\n\n`);
-
-								this.run(method, path, data).then(resolve).catch(reject);
-							}, xRetryAfterHeader * 1000);
+						if (xRetryAfterHeader !== null) {
+							this.logger.info(`The BigCommerce API rate limit has been reached. Please wait ${xRetryAfterHeader} seconds before making another request.`);
 						}
+
+						return setTimeout(() => {
+							// Send log message when restarting request
+							this.logger.info("Restarting request...");
+
+							// Send log message when restarting request
+							this.logger.info(`${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}`);
+
+							this.run(method, path, data).then(resolve).catch(reject);
+						}, xRetryAfterHeader * 1000);
 					}
 				}
 
@@ -146,7 +151,7 @@ class Request {
 								return reject(err);
 							}
 
-							return handleBodyResponse(res, data.toString("utf8"), resolve, reject);
+							return handleBodyResponse(res, data.toString("utf8"), resolve, reject, this.logger);
 						});
 					});
 				});
@@ -155,14 +160,14 @@ class Request {
 			dataString !== null
 				? (() => {
 						// Send log message when sending data
-						console.log(FG_YELLOW, "\nSending BigCommerce data...\n");
+						this.logger.info("Sending BigCommerce data...");
 
 						// Send log message when requesting data
-						console.log(FG_GREEN, `\n${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}\n`);
+						this.logger.info(`${"[" + method.toUpperCase() + "] " + HTTPS_PROTOCOL + this.hostname + path}`);
 
 						req.write(dataString);
 
-						console.log(FG_GREEN, "\nSending complete.\n");
+						this.logger.info("Sending complete.");
 				  })()
 				: null;
 

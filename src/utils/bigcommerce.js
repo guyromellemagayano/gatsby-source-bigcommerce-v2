@@ -1,14 +1,15 @@
+/* eslint-disable no-undef */
 "use strict";
 
 import crypto from "crypto";
-import { FG_BLUE, FG_GREEN, FG_RED, REQUEST_BIGCOMMERCE_API_URL, REQUEST_BIGCOMMERCE_LOGIN_URL } from "../constants";
+import { REQUEST_BIGCOMMERCE_API_URL, REQUEST_BIGCOMMERCE_LOGIN_URL } from "../constants";
 import { handleConversionStringToObject } from "./convertValues";
 import Request from "./request";
 
 class BigCommerce {
 	constructor(config) {
 		if (!config) {
-			const errMessage = new Error("Config missing. The config object is required to make any call to the " + "BigCommerce API");
+			const errMessage = new Error("Config missing. The config object is required to make any call to the BigCommerce API");
 
 			throw errMessage;
 		}
@@ -19,15 +20,18 @@ class BigCommerce {
 
 	// Handle creating API request
 	createAPIRequest(endpoint) {
-		const acceptHeader = this.config.responseType === "xml" ? "application/xml" : "application/json";
+		const accept = this.config.responseType === "xml" ? "application/xml" : "application/json";
 
 		return new Request(endpoint, {
-			headers: Object.assign({
-				"Accept": acceptHeader,
-				"X-Auth-Client": this.config.clientId,
-				"X-Auth-Token": this.config.accessToken
-			}),
-			failOnLimitReached: this.config.failOnLimitReached,
+			headers: Object.assign(
+				{
+					"Accept": accept,
+					"X-Auth-Client": this.config.clientId,
+					"X-Auth-Token": this.config.accessToken
+				},
+				this.config.headers
+			),
+			logger: this.config.logger,
 			agent: this.config.agent
 		});
 	}
@@ -35,12 +39,12 @@ class BigCommerce {
 	// Handle verfiy signed request
 	async verify(signedRequest) {
 		// If `signedRequest` is "undefined", throw an error
-		!signedRequest ? console.error(FG_RED, "The signed request is required to verify the call.") : null;
+		!signedRequest ? this.config.logger.error("The signed request is required to verify the call.") : null;
 
 		const splitRequest = signedRequest.split(".");
 
 		// If `splitRequest` length is less than 2, throw an error
-		splitRequest.length < 2 ? console.error(FG_RED, "The signed request will come in two parts seperated by a .(full stop). " + "this signed request contains less than 2 parts.") : null;
+		splitRequest.length < 2 ? this.config.logger.error("The signed request will come in two parts seperated by a .(full stop). " + "this signed request contains less than 2 parts.") : null;
 
 		// Check and verify validity of signatures
 		const signature = Buffer.from(splitRequest[1], "base64").toString("utf8");
@@ -48,15 +52,15 @@ class BigCommerce {
 		const data = handleConversionStringToObject(json);
 		const expected = crypto.createHmac("sha256", this.config.secret).update(json).digest("hex");
 
-		console.log(FG_BLUE, "\nJSON: " + json);
-		console.log(FG_BLUE, "\nSIGNATURE: " + signature);
-		console.log(FG_BLUE, "\nEXPECTED SIGNATURE: " + expected);
+		this.config.logger.info("JSON: " + json);
+		this.config.logger.info("SIGNATURE: " + signature);
+		this.config.logger.info("EXPECTED SIGNATURE: " + expected);
 
 		// If the expected length of signature doesn't match the current signature length, throw an error, otherwise return data
-		expected.length !== signature.length || crypto.timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(signature, "utf8")) ? console.error(FG_RED, "The signature is invalid.") : null;
+		expected.length !== signature.length || crypto.timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(signature, "utf8")) ? this.config.logger.error("The signature is invalid.") : null;
 
 		// Send log message when signature is valid
-		console.log(FG_GREEN, "The signature is valid.");
+		this.config.logger.info("The signature is valid.");
 
 		return data;
 	}
@@ -64,7 +68,7 @@ class BigCommerce {
 	// Handle authentication request
 	async authorize(query) {
 		// if `query` is undefined, throw an error
-		!query ? console.error(FG_RED, "The URL query paramaters are required.") : null;
+		!query ? this.config.logger.error("The URL query paramaters are required.") : null;
 
 		// Query props
 		const { code, scope, context } = await query;
@@ -92,10 +96,10 @@ class BigCommerce {
 	// Handle API requests
 	async request(type, path, data = null) {
 		// If current `config` have undefined `accessToken`, throw an error
-		this.config.accessToken == null ? console.error(FG_RED, "The access token is required to make BigCommerce API requests.") : null;
+		this.config.accessToken == null ? this.config.logger.error("The access token is required to make BigCommerce API requests.") : null;
 
 		// If current `config` have undefined `storeHash`, throw an error
-		this.config.storeHash == null ? console.error(FG_RED, "The store hash is required to make BigCommerce API requests.") : null;
+		this.config.storeHash == null ? this.config.logger.error("The store hash is required to make BigCommerce API requests.") : null;
 
 		// Prepare `path` for request execution
 		const extension = this.config.responseType === "xml" ? ".xml" : "";
