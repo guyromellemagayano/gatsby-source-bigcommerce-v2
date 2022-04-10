@@ -1,8 +1,7 @@
-"use strict";
-
-const { onCreateDevServer, sourceNodes } = require("./gatsby/sourceNodes");
+const { sourceNodes } = require("./gatsby/sourceNodes");
+const { onCreateDevServer } = require("./gatsby/onCreateDevServer");
 
 module.exports = {
-	sourceNodes: sourceNodes,
-	onCreateDevServer: onCreateDevServer
+	onCreateDevServer: onCreateDevServer,
+	sourceNodes: sourceNodes
 };
