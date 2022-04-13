@@ -14,8 +14,8 @@
 	"plugins": [
 		"@babel/plugin-transform-runtime"
 	],
-	"only": [
-		"src/",
-		"tests/"
+	"ignore": [
+		"node_modules/",
+		"tests/",
 	]
 }

@@ -9,3 +9,6 @@ export const REQUEST_BIGCOMMERCE_API_URL = "api.bigcommerce.com";
 
 // Numbers
 export const REQUEST_BIGCOMMERCE_API_PORT = 443;
+
+// Hooks
+export const BIGCOMMERCE_WEBHOOK_API_ENDPOINT = "/v3/hooks";
