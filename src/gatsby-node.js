@@ -68,6 +68,19 @@ exports.onPreInit = () => {
 
 /**
  * ============================================================================
+ * Override Gatsby default Webpack configuration
+ * ============================================================================
+ */
+exports.onCreateWebpackConfig = async ({ actions }) => {
+	actions.setWebpackConfig({
+		resolve: {
+			fallback: { crypto: false, https: false, zlib: false }
+		}
+	});
+};
+
+/**
+ * ============================================================================
  * Source and cache nodes from the BigCommerce API
  * ============================================================================
  */
