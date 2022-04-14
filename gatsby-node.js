@@ -60,15 +60,46 @@ exports.onPreInit = function () {
   logger.info("`gatsby-source-bigcommerce` plugin loaded successfully.");
 };
 
+exports.onCreateWebpackConfig = function () {
+  var _ref2 = (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee(_ref) {
+    var actions;
+    return _regenerator.default.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            actions = _ref.actions;
+            actions.setWebpackConfig({
+              resolve: {
+                fallback: {
+                  crypto: false,
+                  https: false,
+                  zlib: false
+                }
+              }
+            });
+
+          case 2:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+
+  return function (_x) {
+    return _ref2.apply(this, arguments);
+  };
+}();
+
 exports.sourceNodes = function () {
-  var _ref2 = (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee3(_ref, pluginOptions) {
+  var _ref4 = (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee4(_ref3, pluginOptions) {
     var actions, createNodeId, createContentDigest, createNode, _pluginOptions$endpoi, endpoints, _pluginOptions$client, clientId, _pluginOptions$secret, secret, _pluginOptions$storeH, storeHash, _pluginOptions$access, accessToken, _pluginOptions$siteUr, siteUrl, _pluginOptions$previe, preview, _pluginOptions$logLev, logLevel, _pluginOptions$agent, agent, _pluginOptions$respon, responseType, _pluginOptions$header, headers, helpers, sanitizedSiteUrl, sanitizedLogLevel, sanitizeResponseType, logLevels, combine, timestamp, colorize, simple, logger, errMessage, BC, body, exitMessage;
 
-    return _regenerator.default.wrap(function _callee3$(_context3) {
+    return _regenerator.default.wrap(function _callee4$(_context4) {
       while (1) {
-        switch (_context3.prev = _context3.next) {
+        switch (_context4.prev = _context4.next) {
           case 0:
-            actions = _ref.actions, createNodeId = _ref.createNodeId, createContentDigest = _ref.createContentDigest;
+            actions = _ref3.actions, createNodeId = _ref3.createNodeId, createContentDigest = _ref3.createContentDigest;
             createNode = actions.createNode;
             _pluginOptions$endpoi = pluginOptions.endpoints, endpoints = _pluginOptions$endpoi === void 0 ? null : _pluginOptions$endpoi, _pluginOptions$client = pluginOptions.clientId, clientId = _pluginOptions$client === void 0 ? null : _pluginOptions$client, _pluginOptions$secret = pluginOptions.secret, secret = _pluginOptions$secret === void 0 ? null : _pluginOptions$secret, _pluginOptions$storeH = pluginOptions.storeHash, storeHash = _pluginOptions$storeH === void 0 ? null : _pluginOptions$storeH, _pluginOptions$access = pluginOptions.accessToken, accessToken = _pluginOptions$access === void 0 ? null : _pluginOptions$access, _pluginOptions$siteUr = pluginOptions.siteUrl, siteUrl = _pluginOptions$siteUr === void 0 ? null : _pluginOptions$siteUr, _pluginOptions$previe = pluginOptions.preview, preview = _pluginOptions$previe === void 0 ? false : _pluginOptions$previe, _pluginOptions$logLev = pluginOptions.logLevel, logLevel = _pluginOptions$logLev === void 0 ? "info" : _pluginOptions$logLev, _pluginOptions$agent = pluginOptions.agent, agent = _pluginOptions$agent === void 0 ? null : _pluginOptions$agent, _pluginOptions$respon = pluginOptions.responseType, responseType = _pluginOptions$respon === void 0 ? "json" : _pluginOptions$respon, _pluginOptions$header = pluginOptions.headers, headers = _pluginOptions$header === void 0 ? {} : _pluginOptions$header;
             helpers = Object.assign({}, actions, {
@@ -102,7 +133,7 @@ exports.sourceNodes = function () {
             logger.info("Checking BigCommerce plugin options...");
 
             if (!(endpoints !== null && clientId !== null && secret !== null && storeHash !== null && accessToken !== null)) {
-              _context3.next = 30;
+              _context4.next = 30;
               break;
             }
 
@@ -118,16 +149,16 @@ exports.sourceNodes = function () {
             });
 
             if (!(endpoints && typeof endpoints === "object" && Object.keys(endpoints).length > 0)) {
-              _context3.next = 22;
+              _context4.next = 22;
               break;
             }
 
             logger.info("Valid plugin options found. Proceeding with plugin initialization...");
             logger.info("Requesting endpoint data...");
-            _context3.next = 20;
-            return Promise.all(Object.entries(endpoints).map(function (_ref3) {
-              var nodeName = _ref3[0],
-                  endpoint = _ref3[1];
+            _context4.next = 20;
+            return Promise.all(Object.entries(endpoints).map(function (_ref5) {
+              var nodeName = _ref5[0],
+                  endpoint = _ref5[1];
               return BC.get(endpoint).then(function (res) {
                 var resData = "data" in res && Array.isArray(res.data) ? res.data : res;
                 return "data" in res && Array.isArray(res.data) ? resData.map(function (datum) {
@@ -145,7 +176,7 @@ exports.sourceNodes = function () {
             });
 
           case 20:
-            _context3.next = 23;
+            _context4.next = 23;
             break;
 
           case 22:
@@ -153,7 +184,7 @@ exports.sourceNodes = function () {
 
           case 23:
             if (!(_constants.IS_DEV && preview && sanitizedSiteUrl !== null)) {
-              _context3.next = 28;
+              _context4.next = 28;
               break;
             }
 
@@ -163,18 +194,18 @@ exports.sourceNodes = function () {
               is_active: true,
               destination: sanitizedSiteUrl + "/__BCPreview"
             };
-            _context3.next = 28;
+            _context4.next = 28;
             return BC.get(_constants.BIGCOMMERCE_WEBHOOK_API_ENDPOINT).then(function (res) {
               if ("data" in res && Object.keys(res.data).length > 0) {
                 logger.info("BigCommerce API webhook subscription already exists. Skipping subscription...");
                 logger.info("BigCommerce API webhook subscription complete. Running preview server...");
               } else {
-                (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee() {
-                  return _regenerator.default.wrap(function _callee$(_context) {
+                (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee2() {
+                  return _regenerator.default.wrap(function _callee2$(_context2) {
                     while (1) {
-                      switch (_context.prev = _context.next) {
+                      switch (_context2.prev = _context2.next) {
                         case 0:
-                          _context.next = 2;
+                          _context2.next = 2;
                           return BC.post(_constants.BIGCOMMERCE_WEBHOOK_API_ENDPOINT, body).then(function (res) {
                             if ("data" in res && Object.keys(res.data).length > 0) {
                               logger.info("BigCommerce API webhook subscription created successfully. Running preview server...");
@@ -182,36 +213,36 @@ exports.sourceNodes = function () {
                           });
 
                         case 2:
-                          return _context.abrupt("return", _context.sent);
+                          return _context2.abrupt("return", _context2.sent);
 
                         case 3:
                         case "end":
-                          return _context.stop();
+                          return _context2.stop();
                       }
                     }
-                  }, _callee);
+                  }, _callee2);
                 }))();
               }
 
               var server = (0, _micro.default)(function () {
-                var _ref5 = (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee2(req, res) {
+                var _ref7 = (0, _asyncToGenerator2.default)(_regenerator.default.mark(function _callee3(req, res) {
                   var request, productId, newProduct, nodeToUpdate, _nodeToUpdate$id;
 
-                  return _regenerator.default.wrap(function _callee2$(_context2) {
+                  return _regenerator.default.wrap(function _callee3$(_context3) {
                     while (1) {
-                      switch (_context2.prev = _context2.next) {
+                      switch (_context3.prev = _context3.next) {
                         case 0:
-                          _context2.next = 2;
+                          _context3.next = 2;
                           return _micro.default.json(req);
 
                         case 2:
-                          request = _context2.sent;
+                          request = _context3.sent;
                           productId = request.data.id;
-                          _context2.next = 6;
+                          _context3.next = 6;
                           return BC.get("/catalog/products/" + productId);
 
                         case 6:
-                          newProduct = _context2.sent;
+                          newProduct = _context3.sent;
                           nodeToUpdate = newProduct.data;
 
                           if (nodeToUpdate.id) {
@@ -231,14 +262,14 @@ exports.sourceNodes = function () {
 
                         case 10:
                         case "end":
-                          return _context2.stop();
+                          return _context3.stop();
                       }
                     }
-                  }, _callee2);
+                  }, _callee3);
                 }));
 
-                return function (_x3, _x4) {
-                  return _ref5.apply(this, arguments);
+                return function (_x4, _x5) {
+                  return _ref7.apply(this, arguments);
                 };
               }());
               server.listen(8033, logger.info("Now listening to changes for live preview at /__BCPreview"));
@@ -247,7 +278,7 @@ exports.sourceNodes = function () {
             });
 
           case 28:
-            _context3.next = 35;
+            _context4.next = 35;
             break;
 
           case 30:
@@ -273,7 +304,7 @@ exports.sourceNodes = function () {
 
           case 35:
             if (!(errMessage !== "")) {
-              _context3.next = 39;
+              _context4.next = 39;
               break;
             }
 
@@ -283,19 +314,19 @@ exports.sourceNodes = function () {
 
           case 39:
           case "end":
-            return _context3.stop();
+            return _context4.stop();
         }
       }
-    }, _callee3);
+    }, _callee4);
   }));
 
-  return function (_x, _x2) {
-    return _ref2.apply(this, arguments);
+  return function (_x2, _x3) {
+    return _ref4.apply(this, arguments);
   };
 }();
 
-exports.onCreateDevServer = function (_ref6) {
-  var app = _ref6.app;
+exports.onCreateDevServer = function (_ref8) {
+  var app = _ref8.app;
   return app.use("/__BCPreview/", (0, _httpProxyMiddleware.createProxyMiddleware)({
     target: "http://localhost:8033",
     secure: false
