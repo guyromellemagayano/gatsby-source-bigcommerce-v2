@@ -1,16 +1,22 @@
 {
 	"root": true,
-	"extends": ["eslint:recommended", "prettier", "plugin:prettier/recommended"],
-	"plugins": ["react", "babel", "prettier"],
+	"extends": [
+		"eslint:recommended",
+		"prettier",
+		"plugin:prettier/recommended"
+	],
+	"plugins": [
+		"react",
+		"babel",
+		"prettier"
+	],
 	"env": {
 		"node": true,
-		"es6": true
+		"es2021": true
 	},
 	"parser": "@babel/eslint-parser",
 	"parserOptions": {
-		"ecmaFeatures": {
-			"jsx": true
-		},
+		"ecmaFeatures": {},
 		"ecmaVersion": "latest",
 		"sourceType": "module"
 	},
