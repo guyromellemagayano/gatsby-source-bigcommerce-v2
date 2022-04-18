@@ -3,15 +3,16 @@
 	"version": "2.0.0-2",
 	"description": "This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
 	"scripts": {
-		"build": "babel src --out-dir ./ --source-maps",
-		"watch": "babel src --out-dir ./ --source-maps --watch",
-		"lint": "eslint --ext '**/*.{js,jsx}' --cache --color",
-		"format": "prettier --write '**/*.{js,jsx}'",
-		"prepare": "husky install",
-		"test": "jest --color"
-	},
-	"jest": {
-		"collectCoverage": true
+		"autotest": "supervisor -q -n exit -x node_modules/.bin/_mocha --",
+		"build": "babel ./src/ --out-dir ./ --source-maps",
+		"exectests": "nyc ./node_modules/.bin/_mocha",
+		"watch": "yarn babel ./src/ --out-dir ./ --source-maps --watch",
+		"lint:eslint": "yarn eslint './src/**/*.{js,jsx,ts,tsx}' --quiet --fix --color --ignore-path .gitignore",
+		"lint:prettier": "yarn prettier './src/**/*.{js,jsx,ts,tsx}' --write --ignore-path .gitignore",
+		"lint": "yarn lint:eslint && yarn lint:prettier",
+		"prepare": "yarn husky install",
+		"test": "yarn exectests && yarn lint",
+		"release": "dotenv release-it -VV --"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
 	"repository": {
@@ -72,21 +73,28 @@
 		"@babel/cli": "^7.16.8",
 		"@babel/core": "^7.16.12",
 		"@babel/eslint-parser": "^7.16.5",
-		"@babel/plugin-transform-runtime": "^7.17.0",
-		"babel-jest": "^27.5.1",
+		"@release-it/keep-a-changelog": "^2.5.0",
+		"agentkeepalive": "^4.2.1",
 		"babel-preset-gatsby-package": "^2.10.0",
+		"chai": "^4.3.6",
 		"commitizen": "^4.2.4",
 		"cz-conventional-changelog": "^3.3.0",
-		"eslint": "^8.11.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-babel": "^5.3.1",
 		"eslint-plugin-prettier": "^4.0.0",
 		"eslint-plugin-react": "^7.29.4",
+		"eslint": "^8.11.0",
 		"husky": "^7.0.4",
 		"jest": "^27.5.1",
 		"lint-staged": "^12.3.7",
+		"mocha": "^9.2.2",
+		"nock": "^13.2.4",
+		"nyc": "^15.1.0",
 		"prettier": "^2.6.0",
-		"react": "^18.0.0"
+		"react": "^18.0.0",
+		"release-it": "^14.14.2",
+		"sinon": "^13.0.1",
+		"supervisor": "^0.12.0"
 	},
 	"config": {
 		"commitizen": {
@@ -101,9 +109,8 @@
 		}
 	},
 	"lint-staged": {
-		"**/*.{js,jsx}": [
-			"yarn lint",
-			"yarn format"
+		"**/*.js": [
+			"yarn lint"
 		]
 	},
 	"bugs": {
