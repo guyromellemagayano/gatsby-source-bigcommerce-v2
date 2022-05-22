@@ -11,8 +11,7 @@
 		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
 		"lint": "yarn lint:eslint && yarn lint:prettier",
 		"prepare": "husky install",
-		"test": "yarn exectests && yarn lint",
-		"release": "dotenv release-it -VV --"
+		"test": "yarn exectests && yarn lint"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
 	"repository": {
@@ -56,7 +55,6 @@
 	"main": "index.js",
 	"dependencies": {
 		"babel-preset-gatsby": "^2.10.1",
-		"dotenv-cli": "^5.1.0",
 		"graphql-tag": "^2.12.6",
 		"http-proxy-middleware": "^2.0.4",
 		"micro": "^9.3.4",
