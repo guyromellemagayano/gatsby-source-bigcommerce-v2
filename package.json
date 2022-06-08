@@ -10,7 +10,7 @@
 		"lint:eslint": "eslint './src/**/*.js' --quiet --fix --color --ignore-path .gitignore",
 		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
 		"lint": "yarn lint:eslint && yarn lint:prettier",
-		"prepare": "husky install",
+		"prepare": "cross-env NODE_ENV=production yarn build",
 		"test": "yarn exectests && yarn lint"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
@@ -61,13 +61,13 @@
 	"dependencies": {
 		"@babel/runtime": "^7.17.8",
 		"babel-preset-gatsby": "^2.10.1",
-		"graphql-tag": "^2.12.6",
 		"http-proxy-middleware": "^2.0.4",
 		"micro": "^9.3.4",
+		"node-fetch": "2.6.7",
 		"winston": "^3.7.2"
 	},
 	"peerDependencies": {
-		"gatsby": ">2.0.0"
+		"gatsby": ">3.0.0"
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.16.8",
@@ -78,6 +78,7 @@
 		"babel-preset-gatsby-package": "^2.14.0",
 		"chai": "^4.3.6",
 		"commitizen": "^4.2.4",
+		"cross-env": "^7.0.3",
 		"cz-conventional-changelog": "^3.3.0",
 		"eslint": "^8.16.0",
 		"eslint-config-prettier": "^8.5.0",
@@ -87,13 +88,19 @@
 		"husky": "^8.0.1",
 		"lint-staged": "^13.0.0",
 		"mocha": "^10.0.0",
-		"nock": "^13.2.4",
+		"nock": "^13.2.6",
 		"nyc": "^15.1.0",
 		"prettier": "^2.6.0",
 		"react": "^18.0.0",
 		"release-it": "^15.0.0",
 		"sinon": "^14.0.0",
 		"supervisor": "^0.12.0"
+	},
+	"bugs": {
+		"url": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/issues"
+	},
+	"directories": {
+		"src": "src"
 	},
 	"config": {
 		"commitizen": {
@@ -111,35 +118,5 @@
 		"**/*.js": [
 			"yarn lint"
 		]
-	},
-	"release-it": {
-		"git": {
-			"commitMessage": "chore(release): ${release.version} [skip ci]\n\n${release.notes}",
-			"requireCleanWorkingDir": true,
-			"tagAnnotation": "Release v${version}",
-			"tagName": "v${version}"
-		},
-		"github": {
-			"draft": true,
-			"release": true,
-			"releaseName": "v${version}"
-		},
-		"npm": {
-			"publish": true
-		},
-		"plugins": {
-			"@release-it/keep-a-changelog": {
-				"filename": "CHANGELOG.md",
-				"strictLatest": false
-			}
-		},
-		"publishConfig": {
-			"access": "public",
-			"registry": "https://registry.npmjs.org/@epicdesignlabs/gatsby-source-bigcommerce"
-		},
-		"hooks": {
-			"after:git:release": "if [ \"${isPreRelease}\" != \"true\" ]; then git tag -f latest && git push -f origin latest; fi",
-			"after:release": "echo Successfully created a release draft v${version} for ${repo.repository}. Please add release notes when necessary and publish it!"
-		}
 	}
 }
