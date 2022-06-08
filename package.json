@@ -11,6 +11,9 @@
 		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
 		"lint": "yarn lint:eslint && yarn lint:prettier",
 		"prepare": "cross-env NODE_ENV=production yarn build",
+		"release:major": "changelog -M && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version major && git push origin && git push origin --tags",
+		"release:minor": "changelog -m && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version minor && git push origin && git push origin --tags",
+		"release:patch": "changelog -p && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version patch && git push origin && git push origin --tags",
 		"test": "yarn exectests && yarn lint"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
@@ -19,7 +22,10 @@
 		"url": "git+https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce.git"
 	},
 	"keywords": [
-		"gatsby",
+		"@epicdesignlabs",
+		"api",
+		"storefront",
+		"bigcommerce",
 		"gatsby-plugin",
 		"gatsby-source-bigcommerce",
 		"@epicdesignlabs",
@@ -37,16 +43,6 @@
 	},
 	"contributors": [
 		{
-			"name": "Guy Romelle Magayano",
-			"email": "guy@epicdesignlabs.com",
-			"url": "https://guyromellemagayano.dev"
-		},
-		{
-			"name": "Max Jerry",
-			"email": "maxjerry0107@hotmail.com",
-			"url": "https://maxjerry0107.github.io"
-		},
-		{
 			"name": "Grant Glidewell",
 			"url": "https://www.blogwell.io/"
 		},
@@ -59,9 +55,9 @@
 	"license": "MIT",
 	"main": "index.js",
 	"dependencies": {
-		"@babel/runtime": "^7.17.8",
-		"babel-preset-gatsby": "^2.10.1",
+		"generate-changelog": "^1.8.0",
 		"http-proxy-middleware": "^2.0.4",
+		"lodash": "^4.17.21",
 		"micro": "^9.3.4",
 		"node-fetch": "2.6.7",
 		"winston": "^3.7.2"
@@ -73,17 +69,22 @@
 		"@babel/cli": "^7.16.8",
 		"@babel/core": "^7.16.12",
 		"@babel/eslint-parser": "^7.16.5",
+		"@babel/runtime": "^7.18.3",
 		"agentkeepalive": "^4.2.1",
 		"babel-preset-gatsby-package": "^2.14.0",
+		"babel-preset-minify": "^0.5.2",
 		"chai": "^4.3.6",
 		"commitizen": "^4.2.4",
 		"cross-env": "^7.0.3",
 		"cz-conventional-changelog": "^3.3.0",
-		"eslint": "^8.16.0",
+		"dataloader": "^2.1.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-babel": "^5.3.1",
 		"eslint-plugin-prettier": "^4.0.0",
 		"eslint-plugin-react": "^7.30.0",
+		"eslint": "^8.16.0",
+		"gatsby-core-utils": "^3.15.0",
+		"gatsby": "^4.15.2",
 		"husky": "^8.0.1",
 		"lint-staged": "^13.0.0",
 		"mocha": "^10.0.0",
@@ -113,8 +114,15 @@
 		}
 	},
 	"lint-staged": {
-		"**/*.js": [
+		"**/*.js, **/*.json, **/*.md": [
 			"yarn lint"
 		]
+	},
+	"engines": {
+		"node": ">=14.15.0"
+	},
+	"volta": {
+		"node": "16.15.1",
+		"yarn": "1.22.18"
 	}
 }
