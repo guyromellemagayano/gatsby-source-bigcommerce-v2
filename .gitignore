@@ -43,9 +43,12 @@ package-lock.json
 yarn.lock
 
 # Build files (*.js, *.js.map)
-./*.js
-./*.js.map
+gatsby-*.js
+gatsby-*.js.map
 utils/*.js
 utils/*.js.map
 constants/*.js
 constants/*.js.map
+
+# Source files
+!src/**
