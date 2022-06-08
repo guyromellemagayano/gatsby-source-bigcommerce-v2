@@ -12,7 +12,7 @@
 		"lint": "yarn lint:eslint && yarn lint:prettier",
 		"test": "yarn exectests && yarn lint",
 		"prepare": "cross-env NODE_ENV=production yarn build",
-		"validate": "yarn test && yarn lint",
+		"validate": "yarn lint",
 		"prerelease": "git checkout main && git pull origin main && yarn && yarn validate && git add .",
 		"release": "standard-version -a",
 		"postrelease": "yarn release:*",
