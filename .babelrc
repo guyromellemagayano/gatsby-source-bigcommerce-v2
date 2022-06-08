@@ -1,21 +1,13 @@
 {
 	"presets": [
 		[
-			"babel-preset-gatsby-package",
-			{
-				"browser": true,
-				"targets": {
-					"node": true
-				}
-			}
+			"babel-preset-gatsby-package"
 		]
 	],
-	"comments": false,
 	"plugins": [
 		"@babel/plugin-transform-runtime"
 	],
 	"ignore": [
-		"node_modules/",
-		"tests/"
+		"node_modules/"
 	]
 }
