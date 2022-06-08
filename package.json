@@ -10,11 +10,16 @@
 		"lint:eslint": "eslint './src/**/*.js' --quiet --fix --color --ignore-path .gitignore",
 		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
 		"lint": "yarn lint:eslint && yarn lint:prettier",
+		"test": "yarn exectests && yarn lint",
 		"prepare": "cross-env NODE_ENV=production yarn build",
-		"release:major": "changelog -M && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version major && git push origin && git push origin --tags",
-		"release:minor": "changelog -m && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version minor && git push origin && git push origin --tags",
-		"release:patch": "changelog -p && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version patch && git push origin && git push origin --tags",
-		"test": "yarn exectests && yarn lint"
+		"validate": "yarn test && yarn lint",
+		"prerelease": "git checkout main && git pull origin main && yarn && yarn validate && git add .",
+		"release": "standard-version -a",
+		"postrelease": "yarn release:*",
+		"release:tags": "git push --follow-tags origin main",
+		"release:github": "conventional-github-releaser -p angular",
+		"ci:validate": "rm -rf node_modules && yarn install --frozen-lockfile && yarn validate",
+		"prepublishOnly": "yarn ci:validate && yarn build"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
 	"repository": {
@@ -55,7 +60,6 @@
 	"license": "MIT",
 	"main": "index.js",
 	"dependencies": {
-		"generate-changelog": "^1.8.0",
 		"http-proxy-middleware": "^2.0.4",
 		"lodash": "^4.17.21",
 		"micro": "^9.3.4",
@@ -77,10 +81,11 @@
 		"babel-preset-minify": "^0.5.2",
 		"chai": "^4.3.6",
 		"commitizen": "^4.2.4",
+		"conventional-github-releaser": "^3.1.5",
 		"cross-env": "^7.0.3",
 		"cz-conventional-changelog": "^3.3.0",
 		"dataloader": "^2.1.0",
-		"eslint": "^8.16.0",
+		"eslint": "^8.17.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-babel": "^5.3.1",
 		"eslint-plugin-prettier": "^4.0.0",
@@ -92,9 +97,10 @@
 		"mocha": "^10.0.0",
 		"nock": "^13.2.6",
 		"nyc": "^15.1.0",
-		"prettier": "^2.6.0",
+		"prettier": "^2.6.2",
 		"react": "^18.0.0",
 		"sinon": "^14.0.0",
+		"standard-version": "^9.5.0",
 		"supervisor": "^0.12.0"
 	},
 	"bugs": {
@@ -112,13 +118,13 @@
 		"hooks": {
 			"pre-commit": "lint-staged",
 			"prepare-commit-msg": "exec < /dev/tty && git cz --hook || true",
-			"commit": "cz",
 			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
 		}
 	},
 	"lint-staged": {
 		"**/*.{js,jsx,md,mdx,json}": [
-			"yarn lint"
+			"yarn lint",
+			"git add"
 		]
 	},
 	"engines": {
