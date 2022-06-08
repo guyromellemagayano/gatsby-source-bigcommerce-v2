@@ -2,8 +2,12 @@
 	"presets": [
 		[
 			"babel-preset-gatsby-package"
+		],
+		[
+			"minify"
 		]
 	],
+	"comments": false,
 	"plugins": [
 		"@babel/plugin-transform-runtime"
 	],
