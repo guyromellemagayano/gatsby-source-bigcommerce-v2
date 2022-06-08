@@ -1,6 +1,6 @@
 {
 	"name": "@epicdesignlabs/gatsby-source-bigcommerce",
-	"version": "2.1.0",
+	"version": "2.0.0",
 	"description": "This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
 	"scripts": {
 		"autotest": "supervisor -q -n exit -x node_modules/.bin/_mocha --",
@@ -11,7 +11,9 @@
 		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
 		"lint": "yarn lint:eslint && yarn lint:prettier",
 		"prepare": "cross-env NODE_ENV=production yarn build",
-		"release": "standard-version",
+		"release:major": "changelog -M && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version major && git push origin && git push origin --tags",
+		"release:minor": "changelog -m && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version minor && git push origin && git push origin --tags",
+		"release:patch": "changelog -p && git add CHANGELOG.md && git commit -m 'updated CHANGELOG.md' && npm version patch && git push origin && git push origin --tags",
 		"test": "yarn exectests && yarn lint"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
@@ -93,7 +95,6 @@
 		"prettier": "^2.6.0",
 		"react": "^18.0.0",
 		"sinon": "^14.0.0",
-		"standard-version": "^9.5.0",
 		"supervisor": "^0.12.0"
 	},
 	"bugs": {
