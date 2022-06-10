@@ -4,7 +4,12 @@
 			"babel-preset-gatsby-package"
 		],
 		[
-			"minify"
+			"minify",
+			{
+				"builtIns": false,
+				"evaluate": false,
+				"mangle": false
+			}
 		]
 	],
 	"comments": false,
