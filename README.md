@@ -8,8 +8,6 @@ This official source plugin makes BigCommerce API data available in GatsbyJS sit
 
 - Support for both `v2` and `v3` BigCommerce API versions
 - Enhanced `preview` mode for testing BigCommerce webhooks. Currently supports [**Netlify**](https://www.netlify.com/), [**Vercel**](https://vercel.com/), and [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
-- Log level options for BigCommerce endpoint requests (`error`, `debug`, `info`)
-- Response type selection for Bigcommerce endpoints
 - Support for additional headers
 
 ## Installation and Setup
@@ -50,11 +48,7 @@ module.exports = {
 				},
 				preview: true,
 				siteUrl: "https://example.com",
-				logLevel: "info",
-				responseType: "json",
 				headers: {
-					"Access-Control-Allow-Headers": "Content-Type, Accept",
-					"Access-Control-Allow-Credentials": "true",
 					"Access-Control-Allow-Origin": process.env.BIGCOMMERCE_CORS_ORIGIN,
 					"Access-Control-Allow-Methods": process.env.BIGCOMMERCE_API_ALLOWED_METHODS
 				}
@@ -98,17 +92,6 @@ options: {
 	siteUrl: "https://example.com";
 }
 ```
-
-### Log Levels
-
-- `error`: Only log errors
-- `debug`: Log errors and debug messages
-- `info`: Log errors, debug messages, warning messages, and info messages
-
-### Response Types
-
-- `json`: JSON response type
-- `xml`: XML response type
 
 ### Additional Headers
 
@@ -189,12 +172,6 @@ Please feel free to contribute! PRs are always welcome.
 ## License
 
 This source code is licensed under the **MIT** license found in the [LICENSE](LICENSE) file in the root directory of this source tree.
-
-## Work in Progress
-
-- [ ] Support for `HTTP` methods: (`GET`, `POST`, `PUT`, `DELETE`)
-- [ ] Support for authentication, loading and uninstalling BigCommerce endpoints
-- [ ] Support for secured BigCommerce endpoints connection (`https.Agent`)
 
 ## Author
 
