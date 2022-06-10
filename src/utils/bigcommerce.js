@@ -1,151 +1,88 @@
 "use strict";
 
-import crypto from "crypto";
-import { REQUEST_BIGCOMMERCE_API_URL, REQUEST_BIGCOMMERCE_LOGIN_URL } from "../constants";
-import { handleConversionStringToObject } from "./convertValues";
+import { FG_RED, REQUEST_BIGCOMMERCE_API_URL } from "../constants";
 import Request from "./request";
 
 class BigCommerce {
 	constructor(config) {
-		if (!config) {
-			const errMessage = new Error("Config missing. The config object is required to make any call to the BigCommerce API");
-
-			throw errMessage;
-		}
+		if (!config) throw new Error("\n[FAIL] Config missing. The config object is required to make any call to the BigCommerce API");
 
 		this.config = config;
-		this.grantType = "authorization_code";
 	}
 
 	// Handle creating API request
-	createAPIRequest(endpoint) {
-		const accept = this.config.responseType === "xml" ? "application/xml" : "application/json";
-
-		return new Request(endpoint, {
+	async createAPIRequest(endpoint) {
+		return await new Request(endpoint, {
 			headers: Object.assign(
 				{
-					"Accept": accept,
 					"X-Auth-Client": this.config.clientId,
 					"X-Auth-Token": this.config.accessToken
 				},
 				this.config.headers
 			),
-			logger: this.config.logger,
-			agent: this.config.agent
+			responseType: this.config.responseType
 		});
 	}
 
-	// Handle verfiy signed request
-	async verify(signedRequest) {
-		// If `signedRequest` is "undefined", throw an error
-		!signedRequest ? this.config.logger.error("The signed request is required to verify the call.") : null;
-
-		const splitRequest = signedRequest.split(".");
-
-		// If `splitRequest` length is less than 2, throw an error
-		splitRequest.length < 2 ? this.config.logger.error("The signed request will come in two parts seperated by a .(full stop). " + "this signed request contains less than 2 parts.") : null;
-
-		// Check and verify validity of signatures
-		const signature = Buffer.from(splitRequest[1], "base64").toString("utf8");
-		const json = Buffer.from(splitRequest[0], "base64").toString("utf8");
-		const data = handleConversionStringToObject(json);
-		const expected = crypto.createHmac("sha256", this.config.secret).update(json).digest("hex");
-
-		this.config.logger.info("JSON: " + json);
-		this.config.logger.info("SIGNATURE: " + signature);
-		this.config.logger.info("EXPECTED SIGNATURE: " + expected);
-
-		// If the expected length of signature doesn't match the current signature length, throw an error, otherwise return data
-		expected.length !== signature.length || crypto.timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(signature, "utf8")) ? this.config.logger.error("The signature is invalid.") : null;
-
-		// Send log message when signature is valid
-		this.config.logger.info("The signature is valid.");
-
-		return data;
-	}
-
-	// Handle authentication request
-	async authorize(query) {
-		// if `query` is undefined, throw an error
-		!query ? this.config.logger.error("The URL query paramaters are required.") : null;
-
-		// Query props
-		const { code, scope, context } = await query;
-		const queryCode = code ?? null;
-		const queryScope = scope ?? null;
-		const queryContext = context ?? null;
-
-		// Init payload
-		const payload = {
-			client_id: this.config.clientId,
-			client_secret: this.config.secret,
-			grant_type: this.grantType,
-			code: queryCode,
-			scope: queryScope,
-			context: queryContext
-		};
-
-		// Run request
-		const request = this.createAPIRequest(REQUEST_BIGCOMMERCE_LOGIN_URL);
-		const oauthToken = "/oauth2/token";
-
-		return await request.run("post", oauthToken, payload);
-	}
-
 	// Handle API requests
-	async request(type, path, data = null) {
+	async request(type, path, body = null) {
 		// If current `config` have undefined `accessToken`, throw an error
-		this.config.accessToken == null ? this.config.logger.error("The access token is required to make BigCommerce API requests.") : null;
+		this.config.accessToken === null ? console.log(FG_RED, "\n[FAIL] The `accessToken` is required to make BigCommerce API requests.") : null;
 
 		// If current `config` have undefined `storeHash`, throw an error
-		this.config.storeHash == null ? this.config.logger.error("The store hash is required to make BigCommerce API requests.") : null;
+		this.config.storeHash === null ? console.log(FG_RED, "\n[FAIL] The `storeHash` is required to make BigCommerce API requests.") : null;
 
 		// Prepare `path` for request execution
-		const extension = this.config.responseType === "xml" ? ".xml" : "";
-		const request = this.createAPIRequest(REQUEST_BIGCOMMERCE_API_URL);
-		const version = !path.includes("v3") ? path.replace(/(\?|$)/, extension + "$1") : path;
+		const request = await this.createAPIRequest(REQUEST_BIGCOMMERCE_API_URL);
+		const version = !path.includes("v3") ? path.replace(/(\?|$)/, "" + "$1") : path;
 
 		// Update full path
 		let fullPath = `/stores/${this.config.storeHash}`;
 
 		fullPath += version;
 
-		const response = await request.run(type, fullPath, data);
+		const { data } = await request.run(type, fullPath, body);
 
 		// If response contains pagination.
-		if ("meta" in response && "pagination" in response.meta) {
-			const { total_pages: totalPages, current_page: currentPage } = response.meta.pagination;
+		if (data && typeof data === "object" && Object.keys(data)?.length > 0) {
+			if ("meta" in data) {
+				if ("pagination" in data.meta) {
+					const { total_pages: totalPages, current_page: currentPage } = data.meta.pagination;
 
-			// If current page is not the last page.
-			if (totalPages > currentPage) {
-				// Collect all page request promises in array.
-				const promises = [];
+					// If current page is not the last page.
+					if (totalPages > currentPage) {
+						// Collect all page request promises in array.
+						const promises = [];
 
-				for (let nextPage = currentPage + 1; nextPage <= totalPages; nextPage++) {
-					const endpointUrl = new URL(fullPath, `https://${request.hostname}`);
+						for (let nextPage = currentPage + 1; nextPage <= totalPages; nextPage++) {
+							const endpointUrl = new URL(fullPath, `https://${request.hostname}`);
 
-					// Safely assign `page` query parameter to endpoint URL.
-					endpointUrl.searchParams.set("page", nextPage);
+							// Safely assign `page` query parameter to endpoint URL.
+							endpointUrl.searchParams.set("page", nextPage);
 
-					// Add promise to array for future Promise.All() call.
-					promises.push(request.run(type, `${endpointUrl.pathname}${endpointUrl.search}`, data));
+							// Add promise to array for future Promise.allSettled() call.
+							promises.push(request.run(type, `${endpointUrl.pathname}${endpointUrl.search}`, data));
+						}
+
+						// Request all endpoints in parallel.
+						const { status, value } = await Promise.allSettled(promises);
+
+						if (status === "fulfilled") {
+							value.forEach((pageResponse) => {
+								data.data = data.data.concat(pageResponse.data);
+							});
+
+							// Set pager to last page.
+							data.meta.pagination.total_pages = totalPages;
+							data.meta.pagination.current_page = totalPages;
+						}
+					}
 				}
-
-				// Request all endpoints in parallel.
-				const responses = await Promise.all(promises);
-
-				responses.forEach((pageResponse) => {
-					response.data = response.data.concat(pageResponse.data);
-				});
-
-				// Set pager to last page.
-				response.meta.pagination.total_pages = totalPages;
-				response.meta.pagination.current_page = totalPages;
 			}
 		}
 
 		// Run request
-		return response;
+		return data;
 	}
 
 	// Handle `GET` request
@@ -154,18 +91,8 @@ class BigCommerce {
 	}
 
 	// Handle `POST` request
-	async post(path, data) {
-		return await this.request("post", path, data);
-	}
-
-	// Handle `PUT` request
-	async put(path, data) {
-		return await this.request("put", path, data);
-	}
-
-	// Handle `DELETE` request
-	async delete(path) {
-		return await this.request("delete", path);
+	async post(path, body) {
+		return await this.request("post", path, body);
 	}
 }
 
