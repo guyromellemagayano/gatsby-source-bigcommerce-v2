@@ -35,11 +35,7 @@
 		"gatsby-source-bigcommerce",
 		"@epicdesignlabs",
 		"plugin",
-		"source",
-		"bigcommerce",
-		"api",
-		"big",
-		"commerce"
+		"source"
 	],
 	"author": {
 		"name": "Epic Design Labs",
