@@ -33,7 +33,7 @@
 		"bigcommerce",
 		"gatsby-plugin",
 		"gatsby-source-bigcommerce",
-		"@epicdesignlabs",
+		"gatsby",
 		"plugin",
 		"source"
 	],
