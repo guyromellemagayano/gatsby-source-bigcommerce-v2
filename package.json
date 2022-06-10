@@ -56,11 +56,10 @@
 	"license": "MIT",
 	"main": "index.js",
 	"dependencies": {
+		"axios": "^0.27.2",
 		"http-proxy-middleware": "^2.0.4",
 		"lodash": "^4.17.21",
-		"micro": "^9.3.4",
-		"node-fetch": "3.2.5",
-		"winston": "^3.7.2"
+		"micro": "^9.3.4"
 	},
 	"peerDependencies": {
 		"gatsby": ">3.0.0"
