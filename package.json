@@ -14,11 +14,11 @@
 		"prepare": "cross-env NODE_ENV=production yarn build",
 		"validate": "yarn lint",
 		"prerelease": "git checkout main && git pull origin main && yarn && yarn validate && git add .",
-		"release": "standard-version -a -s",
+		"release": "standard-version -a -s --no-verify",
 		"release:dry-run": "standard-version -a -s --dry-run",
 		"postrelease": "yarn release:tags && yarn release:github",
 		"release:tags": "git push --follow-tags origin main",
-		"release:github": "conventional-github-releaser --token=$GITHUB_TOKEN -p angular",
+		"release:github": "conventional-github-releaser -p angular",
 		"ci:validate": "rm -rf node_modules && yarn install --frozen-lockfile && yarn validate",
 		"prepublishOnly": "yarn ci:validate && yarn build"
 	},
