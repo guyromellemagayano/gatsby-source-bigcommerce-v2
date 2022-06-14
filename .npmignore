@@ -26,7 +26,7 @@ coverage
 .nyc_output
 
 # Dependency directories
-node_modules/
+node_modules
 
 # TypeScript cache
 *.tsbuildinfo
@@ -59,3 +59,13 @@ node_modules/
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Source files
+src
+
+# Test files
+tests
+__tests__
+
+# Type definitions
+types
