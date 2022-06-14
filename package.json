@@ -3,17 +3,16 @@
 	"version": "2.0.0",
 	"description": "This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
 	"scripts": {
-		"autotest": "supervisor -q -n exit -x node_modules/.bin/_mocha --",
 		"watch": "tsc-watch",
 		"build": "tsc",
 		"coverage": "codecov",
-		"exectests": "nyc ./node_modules/.bin/_mocha",
 		"lint:eslint": "eslint './src/' --fix --color",
 		"lint:prettier": "prettier './src/' --write",
 		"lint": "yarn lint:eslint && yarn lint:prettier",
 		"prepare": "cross-env NODE_ENV=production yarn build",
 		"semantic-release": "semantic-release",
-		"test": "yarn lint",
+		"test:watch": "jest --watch",
+		"test": "jest --coverage",
 		"typecheck": "tsc --noEmit",
 		"version": "auto-changelog -p && git add CHANGELOG.md"
 	},
@@ -64,9 +63,6 @@
 	],
 	"license": "MIT",
 	"main": "index.js",
-	"files": [
-		"./src/**/*"
-	],
 	"dependencies": {
 		"@babel/runtime": "^7.18.3",
 		"axios": "^0.27.2",
@@ -91,7 +87,6 @@
 		"@typescript-eslint/eslint-plugin": "^5.28.0",
 		"@typescript-eslint/parser": "^5.28.0",
 		"agentkeepalive": "^4.2.1",
-		"chai": "^4.3.6",
 		"codecov": "^3.8.3",
 		"commitizen": "^4.2.4",
 		"cross-env": "^7.0.3",
@@ -106,14 +101,9 @@
 		"husky": "^8.0.1",
 		"jest": "^28.1.1",
 		"lint-staged": "^13.0.0",
-		"mocha": "^10.0.0",
-		"nock": "^13.2.6",
-		"nyc": "^15.1.0",
 		"prettier": "^2.6.2",
 		"react": "^18.0.0",
 		"semantic-release": "^19.0.2",
-		"sinon": "^14.0.0",
-		"supervisor": "^0.12.0",
 		"ts-jest": "^28.0.5",
 		"ts-node": "^10.2.1",
 		"tsc-watch": "^5.0.3",
@@ -129,7 +119,7 @@
 	},
 	"husky": {
 		"hooks": {
-			"pre-commit": "lint-staged",
+			"pre-commit": "./node_modules/lint-staged/lib",
 			"prepare-commit-msg": "exec < /dev/tty && git cz --hook || true",
 			"commit": "cz",
 			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
