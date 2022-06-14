@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "incremental": true,
+    "module": "commonjs",
+    "outDir": "./",
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2017",
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+  },
+  "include": [
+    "./src/**/*.ts",
+    "./tests/**/*.ts",
+    "./types/**/*.ts"
+  ],
+  "exclude": [
+    "./node_modules",
+    "./dist"
+  ],
+}

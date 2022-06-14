@@ -1,9 +1,11 @@
-# Map file extensions
-*.map
+.env
 
-# Folders
+*.map
+*.graphql
+
 constants/
 gatsby/
 utils/
 node_modules/
-!src/**/*
+.cache/
+public/
