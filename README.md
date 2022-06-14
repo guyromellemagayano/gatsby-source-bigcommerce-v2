@@ -2,7 +2,31 @@
 
 This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.
 
-[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
+[![npm package][npm-img]][npm-url]
+[![Build Status][build-img]][build-url]
+[![Downloads][downloads-img]][downloads-url]
+[![Issues][issues-img]][issues-url]
+[![Code Coverage][codecov-img]][codecov-url]
+[![CodeQL][codeql-img]][codeql-url]
+[![Commitizen Friendly][commitizen-img]][commitizen-url]
+[![Semantic Release][semantic-release-img]][semantic-release-url]
+
+[build-img]: https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/actions/workflows/release.yml/badge.svg
+[build-url]: https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/actions/workflows/release.yml
+[downloads-img]: https://img.shields.io/npm/dt/typescript-npm-package-template
+[downloads-url]: https://www.npmtrends.com/typescript-npm-package-template
+[npm-img]: https://img.shields.io/npm/v/@epicdesignlabs/gatsby-source-bigcommerce
+[npm-url]: https://www.npmjs.com/package/@epicdesignlabs/gatsby-source-bigcommerce
+[issues-img]: https://img.shields.io/github/issues/Epic-Design-Labs/gatsby-source-bigcommerce
+[issues-url]: https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/issues
+[codecov-img]: https://codecov.io/gh/Epic-Design-Labs/gatsby-source-bigcommerce/branch/main/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/Epic-Design-Labs/gatsby-source-bigcommerce
+[codeql-img]: https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/actions/workflows/codeql-analysis.yml/badge.svg
+[codeql-url]: https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/actions/workflows/codeql-analysis.yml/badge.svg
+[semantic-release-img]: https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg
+[semantic-release-url]: https://github.com/semantic-release/semantic-release
+[commitizen-img]: https://img.shields.io/badge/commitizen-friendly-brightgreen.svg
+[commitizen-url]: http://commitizen.github.io/cz-cli/
 
 ## Features
 
@@ -26,7 +50,7 @@ yarn add @epicdesignlabs/gatsby-source-bigcommerce
 
 Setup this plugin in `gatsby-config.js` as follows:
 
-```javascript
+```ts
 module.exports = {
 	// ...
 
@@ -64,7 +88,7 @@ module.exports = {
 
 Add a single or multiple `endpoints`. You can find a list of endpoints [here](https://developer.bigcommerce.com/api-reference/).
 
-```javascript
+```ts
 options: {
 	// ...
 
@@ -84,7 +108,7 @@ options: {
 
 To properly enable preview mode, deploy a site instance in the server (\*currently supports **Netlify**, **Vercel**, and **Gatsby Cloud\***), get your preview URL and add it under the key `siteUrl` and set the `preview` mode to `true` to options as shown
 
-```javascript
+```ts
 options: {
 	// ...
 
@@ -97,10 +121,9 @@ options: {
 
 Add additional headers to the request as follows:
 
-```javascript
+```ts
 options: {
 	// ...
-
 
 	headers: {
 		// Single	header
@@ -119,7 +142,7 @@ options: {
 
 Assuming you correctly setup the plugin in `gatsby-config.js` and you have a `BigCommerceProducts` node name and its valid endpoint:
 
-```javascript
+```ts
 endpoints: {
 	BigCommerceProducts: "/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos";
 }
