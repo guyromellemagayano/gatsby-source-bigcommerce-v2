@@ -34,7 +34,9 @@
 				"project": [
 					"./tsconfig.json"
 				],
-				"createDefaultProgram": true
+				"createDefaultProgram": true,
+				"sourceType": "module",
+				"allowImportExportEverywhere": true
 			}
 		}
 	],
