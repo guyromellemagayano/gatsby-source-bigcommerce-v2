@@ -19,7 +19,7 @@ This official source plugin makes BigCommerce API data available in GatsbyJS sit
 [npm-url]: https://www.npmjs.com/package/@epicdesignlabs/gatsby-source-bigcommerce
 [issues-img]: https://img.shields.io/github/issues/Epic-Design-Labs/gatsby-source-bigcommerce
 [issues-url]: https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/issues
-[codecov-img]: https://codecov.io/gh/Epic-Design-Labs/gatsby-source-bigcommerce/branch/main/graph/badge.svg
+[codecov-img]: https://codecov.io/gh/Epic-Design-Labs/gatsby-source-bigcommerce/branch/main/graph/badge.svg?token=XccPAbjfYV
 [codecov-url]: https://codecov.io/gh/Epic-Design-Labs/gatsby-source-bigcommerce
 [codeql-img]: https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/actions/workflows/codeql-analysis.yml/badge.svg
 [codeql-url]: https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/actions/workflows/codeql-analysis.yml/badge.svg
@@ -32,7 +32,7 @@ This official source plugin makes BigCommerce API data available in GatsbyJS sit
 
 - Support for both `v2` and `v3` BigCommerce API versions
 - Enhanced `preview` mode for testing BigCommerce webhooks. Currently supports [**Netlify**](https://www.netlify.com/), [**Vercel**](https://vercel.com/), and [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
-- Support for additional headers
+- Support for additional headers and multiple endpoints
 
 ## Installation and Setup
 
@@ -65,7 +65,8 @@ module.exports = {
 				accessToken: process.env.BIGCOMMERCE_API_ACCESS_TOKEN,
 				storeHash: process.env.BIGCOMMERCE_API_STORE_HASH,
 				endpoints: {
-					BigCommerceProducts: "/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos",
+					BigCommerceProducts:
+						"/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos",
 					BigCommerceCategories: "/v3/catalog/categories",
 					BigCommerceCategoriesTree: "/v3/catalog/categories/tree",
 					BigCommerceBrands: "/v3/catalog/brands"
@@ -74,7 +75,8 @@ module.exports = {
 				siteUrl: "https://example.com",
 				headers: {
 					"Access-Control-Allow-Origin": process.env.BIGCOMMERCE_CORS_ORIGIN,
-					"Access-Control-Allow-Methods": process.env.BIGCOMMERCE_API_ALLOWED_METHODS
+					"Access-Control-Allow-Methods":
+						process.env.BIGCOMMERCE_API_ALLOWED_METHODS
 				}
 			}
 		}
