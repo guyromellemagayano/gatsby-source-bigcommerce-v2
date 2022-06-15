@@ -119,9 +119,8 @@
 	},
 	"husky": {
 		"hooks": {
-			"pre-commit": "./node_modules/lint-staged/lib",
+			"pre-commit": "lint-staged",
 			"prepare-commit-msg": "exec < /dev/tty && git cz --hook || true",
-			"commit": "cz",
 			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
 		}
 	},
