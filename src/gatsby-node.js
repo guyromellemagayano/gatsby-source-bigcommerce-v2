@@ -1,14 +1,16 @@
+/* eslint-disable no-prototype-builtins */
 "use strict";
 
 import { createProxyMiddleware } from "http-proxy-middleware";
 import micro from "micro";
-import { BIGCOMMERCE_WEBHOOK_API_ENDPOINT, FG_BLUE, FG_CYAN, FG_GREEN, FG_MAGENTA, FG_RED, FG_YELLOW, IS_DEV } from "./constants";
+import { BIGCOMMERCE_WEBHOOK_API_ENDPOINT, IS_DEV } from "./constants";
 import BigCommerce from "./utils/bigcommerce";
-import { handleConversionObjectToString, handleConversionStringToLowercase } from "./utils/convertValues";
+import { convertObjectToString } from "./utils/convertValues";
+import { logger } from "./utils/logger";
 
 /**
  * ============================================================================
- * Helper functions and constants
+ * Helper functions
  * ============================================================================
  */
 const handleCreateNodeFromData = (item, nodeType, helpers) => {
@@ -20,7 +22,7 @@ const handleCreateNodeFromData = (item, nodeType, helpers) => {
 		children: [],
 		internal: {
 			type: nodeType,
-			content: handleConversionObjectToString(item),
+			content: convertObjectToString(item),
 			contentDigest: helpers.createContentDigest(item)
 		}
 	};
@@ -34,23 +36,72 @@ const handleCreateNodeFromData = (item, nodeType, helpers) => {
 
 /**
  * ============================================================================
- * Verify plugin loads and check for required plugin options
+ * Verify plugin loads
  * ============================================================================
  */
 exports.onPreInit = () => {
-	console.log(FG_GREEN, "\n[SUCCESS] `@epicdesignlabs/gatsby-source-bigcommerce` plugin loaded successfully.");
+	logger.info("@epicdesignlabs/gatsby-source-bigcommerce plugin loaded successfully");
 };
 
 /**
  * ============================================================================
- * Override Gatsby default Webpack configuration
+ * Validate plugin options
  * ============================================================================
  */
-exports.onCreateWebpackConfig = async ({ actions }) => {
-	actions.setWebpackConfig({
-		resolve: {
-			fallback: { crypto: false, https: false, zlib: false }
-		}
+exports.pluginOptionsSchema = async ({ Joi }) => {
+	return Joi.object({
+		auth: Joi.object({
+			site_url: Joi.string()
+				.required()
+				.messages({
+					"string.empty": "The `auth.site_url` is empty. Please provide a valid URL.",
+					"string.required": "The `auth.site_url` is required."
+				})
+				.description("The site URL"),
+			client_id: Joi.string()
+				.required()
+				.messages({
+					"string.empty": "The `auth.client_id` is empty. Please provide a valid client ID.",
+					"string.required": "The `auth.client_id` is required."
+				})
+				.description("The client ID of the BigCommerce store"),
+			secret: Joi.string()
+				.required()
+				.messages({
+					"string.empty": "The `auth.secret` is empty. Please provide a valid secret.",
+					"string.required": "The `auth.secret` is required."
+				})
+				.description("The secret of the BigCommerce store"),
+			access_token: Joi.string()
+				.required()
+				.messages({
+					"string.empty": "The `auth.access_token` is empty. Please provide a valid access token.",
+					"string.required": "The `auth.access_token` is required."
+				})
+				.description("The access token of the BigCommerce store"),
+			store_hash: Joi.string()
+				.required()
+				.messages({
+					"string.empty": "The `auth.store_hash` is empty. Please provide a valid store hash.",
+					"string.required": "The `auth.store_hash` is required."
+				})
+				.description("The store hash of the BigCommerce store"),
+			headers: Joi.object().default({}).description("The headers to send with each request")
+		})
+			.required()
+			.messages({
+				"object.required": "The `auth` object is required."
+			})
+			.description("The auth credentials for the BigCommerce site"),
+		endpoints: Joi.object()
+			.required()
+			.messages({
+				"object.required": "The `endpoints` object is required."
+			})
+			.description("The endpoints to create nodes for"),
+		log_level: Joi.string().default("debug").description("The log level to use"),
+		preview: Joi.boolean().default(false).description("Enable preview mode"),
+		response_type: Joi.string().default("json").description("The response type to use")
 	});
 };
 
@@ -60,180 +111,145 @@ exports.onCreateWebpackConfig = async ({ actions }) => {
  * ============================================================================
  */
 exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, pluginOptions) => {
-	const { createNode } = actions;
-	const { endpoints = null, clientId = null, secret = null, storeHash = null, accessToken = null, siteUrl = null, preview = false, headers = {} } = pluginOptions;
+	// Prepare plugin options
+	const {
+		auth: { site_url = null, client_id = null, secret = null, access_token = null, store_hash = null, headers = {} },
+		endpoints = null,
+		preview = false,
+		log_level = "debug",
+		response_type = "json"
+	} = pluginOptions;
 
+	// Prepare node sourcing helpers
 	const helpers = Object.assign({}, actions, {
 		createContentDigest,
 		createNodeId
 	});
 
-	const sanitizedClientId = handleConversionStringToLowercase(clientId);
-	const sanitizedSecret = handleConversionStringToLowercase(secret);
-	const sanitizedStoreHash = handleConversionStringToLowercase(storeHash);
-	const sanitizedAccessToken = handleConversionStringToLowercase(accessToken);
-	const sanitizedSiteUrl = handleConversionStringToLowercase(siteUrl);
+	// Create a new BigCommerce instance
+	const bigcommerce = new BigCommerce({
+		client_id,
+		access_token,
+		secret,
+		store_hash,
+		response_type,
+		headers,
+		log_level
+	});
 
-	// Custom variables
-	let errMessage = "";
+	await Promise.allSettled(
+		Object.entries(endpoints).map(async ([nodeName, endpoint]) => {
+			logger.warn(`Fetching data in ${nodeName} - ${endpoint}...`);
 
-	console.log(FG_YELLOW, "\n[IN PROGRESS] Checking BigCommerce plugin options...");
+			const response = await bigcommerce
+				.get(endpoint)
+				.then((data) => {
+					logger.info(`Success fetching data in ${nodeName} - ${endpoint}`);
 
-	if (endpoints && clientId && secret && storeHash && accessToken) {
-		// Init new `BigCommerce` instance
-		const BC = new BigCommerce({
-			clientId: sanitizedClientId,
-			accessToken: sanitizedAccessToken,
-			secret: sanitizedSecret,
-			storeHash: sanitizedStoreHash,
-			responseType: "json",
-			headers
-		});
-
-		// Handle fetching and creating nodes for a single or multiple endpoints
-		if (endpoints && typeof endpoints === "object" && Object.keys(endpoints).length > 0) {
-			// Send log message when fetching data
-			console.log(FG_GREEN, "\n[SUCCESS] Valid plugin options found. Proceeding with plugin initialization...");
-			console.log(FG_YELLOW, "\n[IN PROGRESS] Requesting endpoint data...");
-
-			await Promise.allSettled(
-				Object.entries(endpoints).map(
-					async ([nodeName, endpoint]) =>
-						await BC.get(endpoint)
-							.then((response) => {
-								// Send log message when data is fetched
-								console.log(FG_GREEN, `\n[SUCCESS] All data for endpoint "${endpoint}" fetched successfully.`);
-								console.log(FG_YELLOW, `\n[IN PROGRESS] Creating nodes for "${endpoint}"...`);
-
-								// Create node for each item in the response
-								return response.data && Array.isArray(response.data) && response.data.length > 0
-									? response.data.map((datum) => (datum && typeof datum === "object" && Object.keys(datum)?.length > 0 ? handleCreateNodeFromData(datum, nodeName, helpers) : null))
-									: response && Array.isArray(response) && response.length > 0
-									? response.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers))
-									: handleCreateNodeFromData(response, nodeName, helpers);
-							})
-							.catch((error) => {
-								// Send log message when data is fetched
-								console.log(FG_RED, `\n[FAIL] Error fetching data for endpoint "${endpoint}".`);
-
-								// Set error message
-								errMessage = error.message;
-							})
-							.finally(() => {
-								// Send log message when data is fetched
-								console.log(FG_GREEN, `\n[SUCCESS] All nodes for endpoint "${endpoint}" created successfully.`);
-							})
-				)
-			)
-				.then(() => {
-					// Send log message when all endpoints have been fetched
-					console.log(FG_GREEN, "\n[SUCCESS] All endpoint data have been fetched successfully.");
+					return { nodeName, endpoint, data };
 				})
 				.catch((err) => {
-					// Send log message when an error occurs
-					errMessage = new Error(`[FAIL] An error occurred while fetching endpoint data: ${err}`);
-				})
-				.finally(() =>
-					// Send log message when fetching data is complete
-					console.log(FG_GREEN, "\n[SUCCESS] Requesting endpoint data complete.")
-				);
-		} else {
-			errMessage = new Error("\n[FAIL] The `endpoints` object is required to make any call to the BigCommerce API");
-		}
+					logger.error(`Error fetching data in ${nodeName} - ${endpoint}: ${err.message}`);
 
-		if (IS_DEV && preview && sanitizedSiteUrl) {
-			console.log(FG_BLUE, "\n[INFO] Preview mode enabled");
-			console.log(FG_YELLOW, "\n[IN PROGRESS] Subscribing you to BigCommerce API webhook...");
+					throw err;
+				});
 
-			// Make a `POST` request to the BigCommerce API to subscribe to its webhook
-			const body = {
-				scope: "store/product/updated",
-				is_active: true,
-				destination: `${sanitizedSiteUrl}/__BCPreview`
-			};
+			return response;
+		})
+	)
+		.then((results) => {
+			results.forEach((result) => {
+				if (result.status === "fulfilled") {
+					const { nodeName, endpoint, data } = result.value;
 
-			await BC.get(BIGCOMMERCE_WEBHOOK_API_ENDPOINT)
-				.then((res) => {
-					if ("data" in res && Object.keys(res.data).length > 0) {
-						console.log(FG_YELLOW, "\n[IN PROGRESS] BigCommerce API webhook subscription already exists. Skipping subscription...");
-						console.log(FG_GREEN, "\n[SUCCESS] BigCommerce API webhook subscription complete.");
-						console.log(FG_YELLOW, "\n[IN PROGRESS] Running preview server...");
-					} else {
-						(async () =>
-							await BC.post(BIGCOMMERCE_WEBHOOK_API_ENDPOINT, body).then((res) => {
-								if ("data" in res && Object.keys(res.data).length > 0) {
-									console.log(FG_GREEN, "\n[SUCCESS] BigCommerce API webhook subscription created successfully.");
-									console.log(FG_YELLOW, "\n[IN PROGRESS] Running preview server...");
-								}
-							}))();
-					}
+					logger.warn(`Preparing data in ${nodeName} - ${endpoint} for node creation...`);
 
-					const server = micro(async (req, res) => {
-						const request = await micro.json(req);
-						const productId = request.data.id;
+					// Create node for each item in the response
+					return data.data && Array.isArray(data.data) && data.data.length > 0
+						? data.data.map((datum) => (datum && typeof datum === "object" && Object.keys(datum)?.length > 0 ? handleCreateNodeFromData(datum, nodeName, helpers) : null))
+						: data && Array.isArray(data) && data.length > 0
+						? data.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers))
+						: handleCreateNodeFromData(data, nodeName, helpers);
+				} else {
+					logger.error(`Error fetching data in ${result.value.nodeName} - ${result.value.endpoint}: ${result.reason.message}`);
 
-						// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
-						const newProduct = await BC.get(`/catalog/products/${productId}`);
-						const nodeToUpdate = newProduct.data;
+					return result.reason;
+				}
+			});
 
-						if (nodeToUpdate.id) {
-							createNode({
-								...nodeToUpdate,
-								id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
-								parent: null,
-								children: [],
-								internal: {
-									type: `BigCommerceNode`,
-									contentDigest: createContentDigest(nodeToUpdate)
-								}
-							});
+			logger.info("BigCommerce source nodes created successfully");
+		})
+		.catch((err) => {
+			logger.error(`An error occurred while fetching BigCommerce endpoint data: ${err.message}`);
 
-							console.log(FG_MAGENTA, `\n[DATA] Updated node: ${nodeToUpdate.id}`);
+			return err;
+		})
+		.finally(async () => {
+			logger.info("Fetching BigCommerce endpoint data done successfully");
+
+			if (IS_DEV && preview && site_url) {
+				logger.warn("Subscribing you to BigCommerce API webhook");
+
+				// Make a `POST` request to the BigCommerce API to subscribe to its webhook
+				const body = {
+					scope: "store/product/updated",
+					is_active: true,
+					destination: `${site_url}/__BCPreview`
+				};
+
+				await bigcommerce
+					.get(BIGCOMMERCE_WEBHOOK_API_ENDPOINT)
+					.then((res) => {
+						if ("data" in res && Object.keys(res.data).length > 0) {
+							logger.info("BigCommerce API webhook subscription already exists. Skipping subscription...");
+							logger.info("BigCommerce API webhook subscription complete");
+							logger.info("Running preview server...");
+						} else {
+							(async () =>
+								await bigcommerce.post(BIGCOMMERCE_WEBHOOK_API_ENDPOINT, body).then((res) => {
+									if ("data" in res && Object.keys(res.data).length > 0) {
+										logger.info("BigCommerce API webhook subscription created successfully.");
+										logger.info("Running preview server...");
+									}
+								}))();
 						}
 
-						// Send a response back to the BigCommerce API
-						res.end("ok");
+						const server = micro(async (req, res) => {
+							const request = await micro.json(req);
+							const productId = request.data.id;
+
+							// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
+							const newProduct = await bigcommerce.get(`/catalog/products/${productId}`);
+							const nodeToUpdate = newProduct.data;
+
+							if (nodeToUpdate.id) {
+								helpers.createNode({
+									...nodeToUpdate,
+									id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
+									parent: null,
+									children: [],
+									internal: {
+										type: `BigCommerceNode`,
+										contentDigest: createContentDigest(nodeToUpdate)
+									}
+								});
+
+								logger.debug(`Updated node: ${nodeToUpdate.id}`);
+							}
+
+							// Send a response back to the BigCommerce API
+							res.end("OK");
+						});
+
+						server.listen(8033, logger.info("Now listening to changes for live preview at /__BCPreview"));
+					})
+					.catch((err) => {
+						logger.error(`An error occurred while creating BigCommerce API webhook subscription. ${err.message}`);
+
+						throw err;
 					});
-
-					server.listen(8033, console.log(FG_CYAN, "\n[SERVER] Now listening to changes for live preview at /__BCPreview"));
-				})
-				.catch((err) => {
-					errMessage = new Error(`[FAIL] An error occurred while creating BigCommerce API webhook subscription. ${err}`);
-				});
-		}
-	} else {
-		// If `endpoints` is null, throw an error
-		if (endpoints === null || typeof endpoints === "undefined") {
-			errMessage = new Error("\n[FAIL] The `endpoints` are required to make any call to the BigCommerce API");
-		}
-
-		// If `clientId` is null, throw an error
-		if (clientId === null || typeof clientId === "undefined") {
-			errMessage = new Error("\n[FAIL] The `clientId` is required to make any call to the BigCommerce API");
-		}
-
-		// If `secret` is null, throw an error
-		if (secret === null || typeof secret === "undefined") {
-			errMessage = new Error("\n[FAIL] The `secret` is required to make any call to the BigCommerce API");
-		}
-
-		// If `storeHash` is null, throw an error
-		if (storeHash === null || typeof storeHash === "undefined") {
-			errMessage = new Error("\n[FAIL] The `storeHash` is required to make any call to the BigCommerce API");
-		}
-
-		// If `accessToken` is null, throw an error
-		if (accessToken === null || typeof accessToken === "undefined") {
-			errMessage = new Error("\n[FAIL] The `accessToken` is required to make any call to the BigCommerce API");
-		}
-	}
-
-	errMessage.length > 0
-		? () => {
-				console.log(FG_RED, "\nPlugin terminated with errors...");
-				throw errMessage;
-		  }
-		: null;
+			}
+		});
 };
 
 /**

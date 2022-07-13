@@ -59,7 +59,8 @@
 		"axios": "^0.27.2",
 		"http-proxy-middleware": "^2.0.4",
 		"lodash": "^4.17.21",
-		"micro": "^9.3.4"
+		"micro": "^9.3.4",
+		"winston": "^3.8.1"
 	},
 	"peerDependencies": {
 		"gatsby": ">3.0.0"
@@ -127,6 +128,6 @@
 	},
 	"volta": {
 		"node": "16.15.1",
-		"yarn": "1.22.18"
+		"yarn": "1.22.19"
 	}
 }

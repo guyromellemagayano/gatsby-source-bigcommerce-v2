@@ -1,59 +1,44 @@
 "use strict";
 
 import axios from "axios";
-import http from "http";
-import https from "https";
-import { FG_BLUE, FG_GREEN, FG_RED, FG_YELLOW } from "../constants";
-import { handleConversionStringToLowercase } from "./convertValues";
+import { REQUEST_ACCEPT_HEADER, REQUEST_TIMEOUT } from "../constants";
+import { logger } from "./logger";
 
 class Request {
-	constructor(hostname = null, { headers = {} } = {}) {
-		hostname === null && headers === null
-			? () => {
-					throw new Error("\nThe hostname and headers are required to make the call to the server.");
-			  }
-			: null;
-
+	constructor(hostname, { headers = {}, response_type = "json", log_level = "debug" } = {}) {
 		this.hostname = hostname;
 		this.headers = headers;
+		this.response_type = response_type;
+		this.log_level = log_level;
 	}
 
 	// Handle running plugin
 	async run(method, path, body) {
-		const sanitizedMethod = handleConversionStringToLowercase(method);
-		const sanitizedPath = handleConversionStringToLowercase(path);
-		const sanitizedBody = handleConversionStringToLowercase(body);
-
 		// Custom `axios` instance
-		const AppAxiosInstance = axios.create({
+		const RequestAxiosInstance = axios.create({
 			baseURL: this.hostname,
 			headers: this.headers,
+			responseType: this.response_type,
 			withCredentials: true,
-			httpAgent: new http.Agent({ keepAlive: true }),
-			httpsAgent: new https.Agent({ keepAlive: true }),
-			timeout: 30000
+			timeout: REQUEST_TIMEOUT
 		});
 
 		// Override default `axios` instance
-		axios.defaults.headers.common["Accept"] = "application/json";
-		axios.defaults.headers.common["Content-Type"] = "application/json";
+		axios.defaults.headers.common["Accept"] = REQUEST_ACCEPT_HEADER;
+		axios.defaults.headers.common["Content-Type"] = REQUEST_ACCEPT_HEADER;
 
 		// Use `axios` interceptors for all HTTP methods (GET, POST, PUT, DELETE, etc.)
-		AppAxiosInstance.interceptors.request.use(
+		RequestAxiosInstance.interceptors.request.use(
 			(req) => Promise.resolve(req),
 			(err) => Promise.reject(err)
 		);
 
 		// Use `axios` interceptors for all HTTP methods (GET, POST, PUT, DELETE, etc.)
-		AppAxiosInstance.interceptors.response.use(
-			(res) => {
-				console.log(FG_GREEN, `\n[${sanitizedMethod.toUpperCase()}] ${this.hostname}${sanitizedPath} ${res.status}`);
-
-				return Promise.resolve(res);
-			},
+		RequestAxiosInstance.interceptors.response.use(
+			(res) => Promise.resolve(res),
 			(err) => {
 				if (err.response) {
-					console.log(FG_RED, `\n[${sanitizedMethod.toUpperCase()}] ${this.hostname}${sanitizedPath} ${err.response.status}`);
+					logger.error(`[${method.toUpperCase()}] ${this.hostname}${path} ${err.response.status}`);
 
 					const errResponseStatusRound = Math.round(err.response.status / 100);
 
@@ -67,21 +52,20 @@ class Request {
 										const xRateLimitTimeWindowMs = err.response.headers["x-rate-limit-time-window-ms"] ?? null;
 
 										if (xRateLimitRequestsLeft && xRateLimitRequestsQuota && xRateLimitTimeResetMs && xRateLimitTimeWindowMs) {
-											console.log(
-												FG_BLUE,
-												`\n[DEBUG] ${this.hostname}${sanitizedPath} - ${xRateLimitRequestsLeft} requests left. - ${xRateLimitRequestsQuota} requests quota. - ${xRateLimitTimeResetMs} ms until reset. - ${xRateLimitTimeWindowMs} ms time window.`
-											);
+											logger.debug(`${this.hostname}${path} - ${xRateLimitRequestsLeft} requests left. - ${xRateLimitRequestsQuota} requests quota. - ${xRateLimitTimeResetMs} ms until reset. - ${xRateLimitTimeWindowMs} ms time window.`);
 										}
 
 										return setTimeout(() => {
 											// Send log message when restarting request
-											console.log(FG_YELLOW, "\n[IN PROGRESS] Restarting request...");
+											if (this.log_level === "debug" || this.log_level === "error" || this.log_level === "warn") {
+												logger.warn(`Restarting request...`);
+											}
 
 											// Send log message when restarting request
-											console.log(FG_BLUE, `\n[${sanitizedMethod.toUpperCase()}] ${this.hostname + sanitizedPath}`);
+											logger.debug(`[${method.toUpperCase()}] ${this.hostname + path}`);
 
 											// Restart request
-											this.run(sanitizedMethod, sanitizedMethod, sanitizedBody).then(Promise.resolve).catch(Promise.reject);
+											this.run(method, method, body).then(Promise.resolve).catch(Promise.reject);
 										}, xRateLimitTimeResetMs);
 								  })()
 								: Promise.reject(err);
@@ -89,24 +73,24 @@ class Request {
 							return Promise.reject(err);
 					}
 				} else {
-					console.log(FG_RED, `\n[${sanitizedMethod.toUpperCase()}] ${this.hostname + sanitizedPath} ${err.message}`);
+					logger.error(`[${method.toUpperCase()}] ${this.hostname + path} ${err.message}`);
 
 					return Promise.reject(err);
 				}
 			}
 		);
 
-		switch (sanitizedMethod) {
+		switch (method) {
 			case "get":
-				return await AppAxiosInstance.get(sanitizedPath)
+				return await RequestAxiosInstance.get(path)
 					.then((res) => Promise.resolve(res))
 					.catch((err) => Promise.reject(err));
 			case "post":
-				return await AppAxiosInstance.post(sanitizedPath, sanitizedBody)
+				return await RequestAxiosInstance.post(path, body)
 					.then((res) => Promise.resolve(res))
 					.catch((err) => Promise.reject(err));
 			default:
-				throw new Error(`The method ${sanitizedMethod} is not supported.`);
+				throw new Error(`The method ${method} is not supported.`);
 		}
 	}
 }

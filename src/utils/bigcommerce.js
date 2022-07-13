@@ -1,47 +1,47 @@
 "use strict";
 
-import { FG_RED, REQUEST_BIGCOMMERCE_API_URL } from "../constants";
+import { REQUEST_BIGCOMMERCE_API_URL } from "../constants";
 import Request from "./request";
 
 class BigCommerce {
 	constructor(config) {
-		if (!config) throw new Error("\n[FAIL] Config missing. The config object is required to make any call to the BigCommerce API");
+		if (!config) {
+			throw new Error("BigCommerce config required. It is required to make any call to the BigCommerce API");
+		}
 
-		this.config = config;
-	}
-
-	// Handle creating API request
-	async createAPIRequest(endpoint) {
-		return await new Request(endpoint, {
-			headers: Object.assign(
-				{
-					"X-Auth-Client": this.config.clientId,
-					"X-Auth-Token": this.config.accessToken
-				},
-				this.config.headers
-			),
-			responseType: this.config.responseType
-		});
+		this.client_id = config.client_id;
+		this.access_token = config.access_token;
+		this.secret = config.secret;
+		this.store_hash = config.store_hash;
+		this.response_type = config.response_type;
+		this.headers = config.headers;
+		this.log_level = config.log_level;
 	}
 
 	// Handle API requests
-	async request(type, path, body = null) {
-		// If current `config` have undefined `accessToken`, throw an error
-		this.config.accessToken === null ? console.log(FG_RED, "\n[FAIL] The `accessToken` is required to make BigCommerce API requests.") : null;
-
-		// If current `config` have undefined `storeHash`, throw an error
-		this.config.storeHash === null ? console.log(FG_RED, "\n[FAIL] The `storeHash` is required to make BigCommerce API requests.") : null;
-
+	async request(method, path, body = null) {
 		// Prepare `path` for request execution
-		const request = await this.createAPIRequest(REQUEST_BIGCOMMERCE_API_URL);
+		const request = new Request(REQUEST_BIGCOMMERCE_API_URL, {
+			headers: Object.assign(
+				{
+					"X-Auth-Client": this.client_id,
+					"X-Auth-Token": this.access_token
+				},
+				this.headers
+			),
+			response_type: this.response_type,
+			log_level: this.log_level
+		});
+
 		const version = !path.includes("v3") ? path.replace(/(\?|$)/, "" + "$1") : path;
 
 		// Update full path
-		let fullPath = `/stores/${this.config.storeHash}`;
+		let fullPath = `/stores/${this.store_hash}`;
 
 		fullPath += version;
 
-		const { data } = await request.run(type, fullPath, body);
+		// Run request
+		const { data } = await request.run(method, fullPath, body);
 
 		// If response contains pagination.
 		if (data && typeof data === "object" && Object.keys(data)?.length > 0) {
@@ -61,7 +61,7 @@ class BigCommerce {
 							endpointUrl.searchParams.set("page", nextPage);
 
 							// Add promise to array for future Promise.allSettled() call.
-							promises.push(request.run(type, `${endpointUrl.pathname}${endpointUrl.search}`, data));
+							promises.push(request.run(method, `${endpointUrl.pathname}${endpointUrl.search}`, data));
 						}
 
 						// Request all endpoints in parallel.
@@ -81,7 +81,7 @@ class BigCommerce {
 			}
 		}
 
-		// Run request
+		// Return data
 		return data;
 	}
 
