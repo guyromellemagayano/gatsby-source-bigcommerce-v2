@@ -3,23 +3,12 @@
 	"version": "2.0.0",
 	"description": "This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
 	"scripts": {
-		"autotest": "supervisor -q -n exit -x node_modules/.bin/_mocha --",
 		"build": "babel ./src/ --out-dir ./ --source-maps",
-		"exectests": "nyc ./node_modules/.bin/_mocha",
 		"watch": "babel ./src/ --out-dir ./ --source-maps --watch",
 		"lint:eslint": "eslint './src/**/*.js' --quiet --fix --color --ignore-path .gitignore",
 		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
 		"lint": "yarn lint:eslint && yarn lint:prettier",
-		"test": "yarn exectests && yarn lint",
-		"prepare": "cross-env NODE_ENV=production yarn build",
-		"validate": "yarn lint",
-		"prerelease": "git checkout main && git pull origin main && yarn && yarn validate && git add .",
-		"release": "standard-version -a",
-		"postrelease": "yarn release:*",
-		"release:tags": "git push --follow-tags origin main",
-		"release:github": "conventional-github-releaser -p angular",
-		"ci:validate": "rm -rf node_modules && yarn install --frozen-lockfile && yarn validate",
-		"prepublishOnly": "yarn ci:validate && yarn build"
+		"test": "yarn lint"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
 	"repository": {
@@ -72,15 +61,10 @@
 		"@babel/runtime": "^7.18.3",
 		"@commitlint/cli": "^17.0.2",
 		"@commitlint/config-conventional": "^17.0.2",
-		"agentkeepalive": "^4.2.1",
 		"babel-preset-gatsby-package": "^2.16.0",
-		"babel-preset-minify": "^0.5.2",
-		"chai": "^4.3.6",
 		"commitizen": "^4.2.4",
-		"conventional-github-releaser": "^3.1.5",
 		"cross-env": "^7.0.3",
 		"cz-conventional-changelog": "^3.3.0",
-		"dataloader": "^2.1.0",
 		"eslint": "^8.17.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-babel": "^5.3.1",
@@ -90,14 +74,8 @@
 		"gatsby-core-utils": "^3.16.0",
 		"husky": "^8.0.1",
 		"lint-staged": "^13.0.0",
-		"mocha": "^10.0.0",
-		"nock": "^13.2.6",
-		"nyc": "^15.1.0",
 		"prettier": "^2.6.2",
-		"react": "^18.0.0",
-		"sinon": "^14.0.0",
-		"standard-version": "^9.5.0",
-		"supervisor": "^0.12.0"
+		"react": "^18.0.0"
 	},
 	"bugs": {
 		"url": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/issues"
@@ -114,6 +92,7 @@
 		"hooks": {
 			"pre-commit": "lint-staged",
 			"prepare-commit-msg": "exec < /dev/tty && git cz --hook || true",
+			"commit": "cz",
 			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
 		}
 	},
