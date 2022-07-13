@@ -50,11 +50,10 @@ module.exports = {
 			resolve: "@epicdesignlabs/gatsby-source-bigcommerce",
 			options: {
 				auth: {
-					site_url: process.env.BIGCOMMERCE_API_HOSTNAME,
-					client_id: process.env.BIGCOMMERCE_API_CLIENT_ID,
-					secret: process.env.BIGCOMMERCE_API_SECRET,
-					access_token: process.env.BIGCOMMERCE_API_ACCESS_TOKEN,
-					store_hash: process.env.BIGCOMMERCE_API_STORE_HASH
+					client_id: process.env.BIGCOMMERCE_API_CLIENT_ID // The client ID of your BigCommerce store.,
+					secret: process.env.BIGCOMMERCE_API_SECRET_KEY // The secret key of your BigCommerce store.,
+					access_token: process.env.BIGCOMMERCE_API_ACCESS_TOKEN // The access token of your BigCommerce store.,
+					store_hash: process.env.BIGCOMMERCE_API_STORE_HASH // The store hash of your BigCommerce store.,
 				},
 				endpoints: {
 					BigCommerceProducts: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers"
