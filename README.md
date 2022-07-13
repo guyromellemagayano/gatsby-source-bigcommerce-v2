@@ -15,10 +15,6 @@ This unofficial source plugin makes BigCommerce API data available in GatsbyJS s
 ![npms.io (final)](https://img.shields.io/npms-io/maintenance-score/@epicdesignlabs/gatsby-source-bigcommerce)
 ![npms.io (final)](https://img.shields.io/npms-io/quality-score/@epicdesignlabs/gatsby-source-bigcommerce)
 
-![GitHub Repo stars](https://img.shields.io/github/stars/Epic-Design-Labs/gatsby-source-bigcommerce?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/Epic-Design-Labs/gatsby-source-bigcommerce?style=social)
-![GitHub forks](https://img.shields.io/github/forks/Epic-Design-Labs/gatsby-source-bigcommerce?style=social)
-
 ## Features
 
 - Support for both `v2` and `v3` BigCommerce API versions
