@@ -51,13 +51,6 @@ exports.onPreInit = () => {
 exports.pluginOptionsSchema = async ({ Joi }) => {
 	return Joi.object({
 		auth: Joi.object({
-			site_url: Joi.string()
-				.required()
-				.messages({
-					"string.empty": "The `auth.site_url` is empty. Please provide a valid URL.",
-					"string.required": "The `auth.site_url` is required."
-				})
-				.description("The site URL"),
 			client_id: Joi.string()
 				.required()
 				.messages({
@@ -99,8 +92,19 @@ exports.pluginOptionsSchema = async ({ Joi }) => {
 				"object.required": "The `endpoints` object is required."
 			})
 			.description("The endpoints to create nodes for"),
+		preview: Joi.object({
+			site_url: Joi.string()
+				.required()
+				.messages({
+					"string.empty": "The `preview.site_url` is empty. Please provide a valid URL.",
+					"string.required": "The `preview.site_url` is required."
+				})
+				.description("The site URL"),
+			enabled: Joi.boolean().default(false).description("Enable preview mode")
+		})
+			.default(false)
+			.description("The preview mode settings"),
 		log_level: Joi.string().default("debug").description("The log level to use"),
-		preview: Joi.boolean().default(false).description("Enable preview mode"),
 		response_type: Joi.string().default("json").description("The response type to use")
 	});
 };
@@ -113,7 +117,7 @@ exports.pluginOptionsSchema = async ({ Joi }) => {
 exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, pluginOptions) => {
 	// Prepare plugin options
 	const {
-		auth: { site_url = null, client_id = null, secret = null, access_token = null, store_hash = null, headers = {} },
+		auth: { client_id = null, secret = null, access_token = null, store_hash = null, headers = {} },
 		endpoints = null,
 		preview = false,
 		log_level = "debug",
@@ -187,14 +191,18 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		.finally(async () => {
 			logger.info("Fetching BigCommerce endpoint data done successfully");
 
-			if (IS_DEV && preview && site_url) {
+			if (IS_DEV && preview) {
+				if (!preview.enabled && typeof preview.enabled !== "boolean" && !preview.site_url && typeof preview.site_url !== "string" && preview.site_url?.length === 0) {
+					throw new Error("Incorrect preview settings. Check the `preview` object. It must have `enabled` and `site_url` properties set correctly.");
+				}
+
 				logger.warn("Subscribing you to BigCommerce API webhook");
 
 				// Make a `POST` request to the BigCommerce API to subscribe to its webhook
 				const body = {
 					scope: "store/product/updated",
 					is_active: true,
-					destination: `${site_url}/__BCPreview`
+					destination: `${preview.site_url}/__BCPreview`
 				};
 
 				await bigcommerce

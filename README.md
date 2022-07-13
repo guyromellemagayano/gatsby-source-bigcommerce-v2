@@ -1,14 +1,31 @@
 # @epicdesignlabs/gatsby-source-bigcommerce
 
-This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.
+This unofficial source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.
 
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
+![GitHub](https://img.shields.io/github/license/Epic-Design-Labs/gatsby-source-bigcommerce)
+![npm](https://img.shields.io/npm/dt/@epicdesignlabs/gatsby-source-bigcommerce)
+![GitHub issues](https://img.shields.io/github/issues/Epic-Design-Labs/gatsby-source-bigcommerce)
+![GitHub closed issues](https://img.shields.io/github/issues-closed/Epic-Design-Labs/gatsby-source-bigcommerce)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/Epic-Design-Labs/gatsby-source-bigcommerce)
+![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/Epic-Design-Labs/gatsby-source-bigcommerce)
+![GitHub contributors](https://img.shields.io/github/contributors/Epic-Design-Labs/gatsby-source-bigcommerce)
+![GitHub package.json version](https://img.shields.io/github/package-json/v/Epic-Design-Labs/gatsby-source-bigcommerce)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/y/Epic-Design-Labs/gatsby-source-bigcommerce)
+![npms.io (final)](https://img.shields.io/npms-io/maintenance-score/@epicdesignlabs/gatsby-source-bigcommerce)
+![npms.io (final)](https://img.shields.io/npms-io/quality-score/@epicdesignlabs/gatsby-source-bigcommerce)
+
+![GitHub Repo stars](https://img.shields.io/github/stars/Epic-Design-Labs/gatsby-source-bigcommerce?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/Epic-Design-Labs/gatsby-source-bigcommerce?style=social)
+![GitHub forks](https://img.shields.io/github/forks/Epic-Design-Labs/gatsby-source-bigcommerce?style=social)
 
 ## Features
 
 - Support for both `v2` and `v3` BigCommerce API versions
-- Enhanced `preview` mode for testing BigCommerce webhooks. Currently supports [**Netlify**](https://www.netlify.com/), [**Vercel**](https://vercel.com/), and [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
+- Enhanced `preview` mode for testing BigCommerce webhooks. Currently supports [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
 - Support for additional headers
+- Log level options for BigCommerce endpoint requests: `info`, `debug`, `warn`, `error`
+- Support for various response types: `json`, `xml`
 
 ## Installation and Setup
 
@@ -36,21 +53,15 @@ module.exports = {
 		{
 			resolve: "@epicdesignlabs/gatsby-source-bigcommerce",
 			options: {
-				clientId: process.env.BIGCOMMERCE_API_CLIENT_ID,
-				secret: process.env.BIGCOMMERCE_API_SECRET,
-				accessToken: process.env.BIGCOMMERCE_API_ACCESS_TOKEN,
-				storeHash: process.env.BIGCOMMERCE_API_STORE_HASH,
-				endpoints: {
-					BigCommerceProducts: "/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos",
-					BigCommerceCategories: "/v3/catalog/categories",
-					BigCommerceCategoriesTree: "/v3/catalog/categories/tree",
-					BigCommerceBrands: "/v3/catalog/brands"
+				auth: {
+					site_url: process.env.BIGCOMMERCE_API_HOSTNAME,
+					client_id: process.env.BIGCOMMERCE_API_CLIENT_ID,
+					secret: process.env.BIGCOMMERCE_API_SECRET,
+					access_token: process.env.BIGCOMMERCE_API_ACCESS_TOKEN,
+					store_hash: process.env.BIGCOMMERCE_API_STORE_HASH
 				},
-				preview: true,
-				siteUrl: "https://example.com",
-				headers: {
-					"Access-Control-Allow-Origin": process.env.BIGCOMMERCE_CORS_ORIGIN,
-					"Access-Control-Allow-Methods": process.env.BIGCOMMERCE_API_ALLOWED_METHODS
+				endpoints: {
+					BigCommerceProducts: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers"
 				}
 			}
 		}
@@ -62,7 +73,7 @@ module.exports = {
 
 ### Endpoints
 
-Add a single or multiple `endpoints`. You can find a list of endpoints [here](https://developer.bigcommerce.com/api-reference/).
+Add a single or multiple `endpoints`. Also supports `v2` and `v3` API endpoint versions. You can find a list of endpoints [here](https://developer.bigcommerce.com/api-reference/).
 
 ```javascript
 options: {
@@ -73,6 +84,11 @@ options: {
 		BigCommerceProducts: "/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos",
 
 		// Multiple endpoints
+		BigCommerceStore: "/v2/store",
+		BigCommercePageContent: "/v2/pages?limit=250",
+		BigCommerceCategories: "/v3/catalog/categories?limit=250",
+		BigCommerceBrands: "/v3/catalog/brands?limit=250",
+		BigCommercePages: "/v3/content/pages?limit=250",
 		BigCommerceCategories: "/v3/catalog/categories",
 		BigCommerceCategoriesTree: "/v3/catalog/categories/tree",
 		BigCommerceBrands: "/v3/catalog/brands"
@@ -82,14 +98,18 @@ options: {
 
 ### Preview
 
-To properly enable preview mode, deploy a site instance in the server (\*currently supports **Netlify**, **Vercel**, and **Gatsby Cloud\***), get your preview URL and add it under the key `siteUrl` and set the `preview` mode to `true` to options as shown
+To properly enable preview mode, deploy a site instance in the server (currently supports **Gatsby Cloud**), get your preview URL and add it under the key `siteUrl` and set the `preview` mode to `true` to options as shown. Default is `false`.
 
 ```javascript
 options: {
 	// ...
 
-	preview: true;
-	siteUrl: "https://example.com";
+	options: {
+		preview: {
+			enabled: true
+			siteUrl: "https://example.com"
+		};
+	}
 }
 ```
 
@@ -101,17 +121,42 @@ Add additional headers to the request as follows:
 options: {
 	// ...
 
+	auth: {
+		headers: {
+			// Single header
+			"X-Custom-Header": "Custom Value",
 
-	headers: {
-		// Single	header
-		"X-Custom-Header": "Custom Value",
-
-		// Mutiple headers
-		"Access-Control-Allow-Headers": "Custom Value",
-		"Access-Control-Allow-Credentials": "Custom Value",
-		"Access-Control-Allow-Origin": "Custom Value",
-		"Access-Control-Allow-Methods": "Custom Value"
+			// Mutiple headers
+			"Access-Control-Allow-Headers": "Custom Value",
+			"Access-Control-Allow-Credentials": "Custom Value",
+			"Access-Control-Allow-Origin": "Custom Value",
+			"Access-Control-Allow-Methods": "Custom Value"
+		}
 	}
+}
+```
+
+### Log Level
+
+Set the log level for the BigCommerce API requests. Default: `debug`.
+
+```javascript
+options: {
+	// ...
+
+	logLevel: "debug";
+}
+```
+
+### Response Type
+
+Set the response type for the BigCommerce API requests. Default: `json`.
+
+```javascript
+options: {
+	// ...
+
+	responseType: "json";
 }
 ```
 
