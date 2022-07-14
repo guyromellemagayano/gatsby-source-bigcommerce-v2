@@ -8,7 +8,11 @@
 		"lint:eslint": "eslint './src/**/*.js' --quiet --fix --color --ignore-path .gitignore",
 		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
 		"lint": "yarn lint:eslint && yarn lint:prettier",
-		"test": "yarn lint"
+		"test": "yarn lint",
+		"prepare": "cross-env NODE_ENV=production yarn build",
+		"validate": "yarn lint",
+		"ci:validate": "rm -rf node_modules && yarn install --frozen-lockfile && yarn validate",
+		"prepublishOnly": "yarn ci:validate && yarn build"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
 	"repository": {
