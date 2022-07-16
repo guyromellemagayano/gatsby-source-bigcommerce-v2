@@ -6,7 +6,7 @@ import Request from "./request";
 class BigCommerce {
 	constructor(config) {
 		if (!config) {
-			throw new Error("BigCommerce config required. It is required to make any call to the BigCommerce API");
+			throw new Error("BigCommerce API config required. It is required to make any call to the BigCommerce API");
 		}
 
 		this.client_id = config.client_id;
