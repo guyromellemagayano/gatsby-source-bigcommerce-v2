@@ -133,7 +133,9 @@ options: {
 
 ### Log Level
 
-Set the log level for the BigCommerce API requests. Default: `debug`.
+Set the log level for the BigCommerce API requests. Supports `info`, `debug`, `warn`, `error`.
+
+**Default:** `debug`.
 
 ```javascript
 options: {
@@ -145,7 +147,9 @@ options: {
 
 ### Response Type
 
-Set the response type for the BigCommerce API requests. Default: `json`.
+Set the response type for the BigCommerce API requests. Supports `json`, `xml`.
+
+**Default:** `json`.
 
 ```javascript
 options: {
