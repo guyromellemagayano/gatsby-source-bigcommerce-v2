@@ -147,10 +147,10 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 
 			const response = await bigcommerce
 				.get(endpoint)
-				.then((data) => {
+				.then((res) => {
 					logger.info(`Success fetching data in ${nodeName} - ${endpoint}`);
 
-					return { nodeName, endpoint, data };
+					return { nodeName, endpoint, res };
 				})
 				.catch((err) => {
 					logger.error(`Error fetching data in ${nodeName} - ${endpoint}: ${err.message}`);
@@ -164,16 +164,19 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		.then((results) => {
 			results.forEach((result) => {
 				if (result.status === "fulfilled") {
-					const { nodeName, endpoint, data } = result.value;
+					const { nodeName, endpoint, res } = result.value;
 
 					logger.warn(`Preparing data in ${nodeName} - ${endpoint} for node creation...`);
 
+					// If the data object is not on the response, it could be `v2` which returns an array as the root, so use that as a fallback
+					const resData = "data" in res && Array.isArray(res.data) ? res.data : res;
+
 					// Create node for each item in the response
-					return data.data && Array.isArray(data.data) && data.data.length > 0
-						? data.data.map((datum) => (datum && typeof datum === "object" && Object.keys(datum)?.length > 0 ? handleCreateNodeFromData(datum, nodeName, helpers) : null))
-						: data && Array.isArray(data) && data.length > 0
-						? data.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers))
-						: handleCreateNodeFromData(data, nodeName, helpers);
+					return "data" in res && Array.isArray(res.data)
+						? resData.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers))
+						: Array.isArray(res)
+						? res.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers))
+						: handleCreateNodeFromData(resData, nodeName, helpers);
 				} else {
 					logger.error(`Error fetching data in ${result.value.nodeName} - ${result.value.endpoint}: ${result.reason.message}`);
 
