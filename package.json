@@ -12,7 +12,7 @@
 		"prepare": "cross-env NODE_ENV=production npm run build",
 		"release": "release-it",
 		"validate": "npm run lint",
-		"ci:validate": "rm -rf node_modules && npm run ci && npm run validate",
+		"ci:validate": "rm -rf node_modules && npm ci && npm run validate",
 		"prepublishOnly": "npm run ci:validate && npm run build"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
