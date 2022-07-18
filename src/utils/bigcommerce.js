@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 "use strict";
 
 import { REQUEST_BIGCOMMERCE_API_URL } from "../constants";
@@ -73,6 +72,8 @@ class BigCommerce {
 								data.data = data.data.concat(value.data.data);
 							}
 						});
+
+						// Set pager to last page.
 						data.meta.pagination.total_pages = totalPages;
 						data.meta.pagination.current_page = totalPages;
 					}
