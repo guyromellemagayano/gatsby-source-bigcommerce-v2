@@ -7,13 +7,13 @@
 		"watch": "babel ./src/ --out-dir ./ --source-maps --watch",
 		"lint:eslint": "eslint './src/**/*.js' --quiet --fix --color --ignore-path .gitignore",
 		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
-		"lint": "yarn lint:eslint && yarn lint:prettier",
-		"test": "yarn lint",
-		"prepare": "cross-env NODE_ENV=production yarn build",
+		"lint": "npm run lint:eslint && npm run lint:prettier",
+		"test": "npm run lint",
+		"prepare": "cross-env NODE_ENV=production npm run build",
 		"release": "release-it",
-		"validate": "yarn lint",
-		"ci:validate": "rm -rf node_modules && yarn install --frozen-lockfile && yarn validate",
-		"prepublishOnly": "yarn ci:validate && yarn build"
+		"validate": "npm run lint",
+		"ci:validate": "rm -rf node_modules && npm run ci && npm run validate",
+		"prepublishOnly": "npm run ci:validate && npm run build"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
 	"repository": {
@@ -102,7 +102,7 @@
 	},
 	"lint-staged": {
 		"**/*.{js,jsx,md,mdx,json}": [
-			"yarn lint",
+			"npm run lint",
 			"git add"
 		]
 	},
@@ -110,7 +110,7 @@
 		"node": ">=16.15.1"
 	},
 	"volta": {
-		"node": "16.15.1",
-		"yarn": "1.22.19"
+		"node": "16.16.0",
+		"npm": "8.14.0"
 	}
 }
