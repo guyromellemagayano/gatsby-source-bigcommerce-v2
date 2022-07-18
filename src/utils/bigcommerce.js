@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 "use strict";
 
 import { REQUEST_BIGCOMMERCE_API_URL } from "../constants";
@@ -61,21 +62,19 @@ class BigCommerce {
 							endpointUrl.searchParams.set("page", nextPage);
 
 							// Add promise to array for future Promise.allSettled() call.
-							promises.push(request.run(method, `${endpointUrl.pathname}${endpointUrl.search}`, data));
+							promises.push(request.run(method, `${endpointUrl.pathname}${endpointUrl.search}`, body));
 						}
 
 						// Request all endpoints in parallel.
-						const { status, value } = await Promise.allSettled(promises);
+						const responses = await Promise.allSettled(promises);
 
-						if (status === "fulfilled") {
-							value.forEach((pageResponse) => {
-								data.data = data.data.concat(pageResponse.data);
-							});
-
-							// Set pager to last page.
-							data.meta.pagination.total_pages = totalPages;
-							data.meta.pagination.current_page = totalPages;
-						}
+						responses.forEach(({ status, value }) => {
+							if (status === "fulfilled") {
+								data.data = data.data.concat(value.data.data);
+							}
+						});
+						data.meta.pagination.total_pages = totalPages;
+						data.meta.pagination.current_page = totalPages;
 					}
 				}
 			}
