@@ -49,6 +49,7 @@
 		"http-proxy-middleware": "^2.0.4",
 		"lodash": "^4.17.21",
 		"micro": "^9.3.4",
+		"then-sleep": "^1.0.1",
 		"winston": "^3.8.1"
 	},
 	"peerDependencies": {

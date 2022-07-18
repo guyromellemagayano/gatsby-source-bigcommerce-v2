@@ -1,9 +1,11 @@
 /* eslint-disable no-prototype-builtins */
 "use strict";
 
+import http from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import micro from "micro";
-import { BIGCOMMERCE_WEBHOOK_API_ENDPOINT, IS_DEV } from "./constants";
+import sleep from "then-sleep";
+import { BIGCOMMERCE_WEBHOOK_API_ENDPOINT, IS_DEV, REQUEST_TIMEOUT } from "./constants";
 import BigCommerce from "./utils/bigcommerce";
 import { convertObjectToString } from "./utils/convertValues";
 import { logger } from "./utils/logger";
@@ -225,32 +227,36 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 								}))();
 						}
 
-						const server = micro(async (req, res) => {
-							const request = await micro.json(req);
-							const productId = request.data.id;
+						const server = new http.createServer(
+							micro(async (req, res) => {
+								const request = await micro.json(req);
+								const productId = request.data.id;
 
-							// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
-							const newProduct = await bigcommerce.get(`/catalog/products/${productId}`);
-							const nodeToUpdate = newProduct.data;
+								// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
+								const newProduct = await bigcommerce.get(`/catalog/products/${productId}`);
+								const nodeToUpdate = newProduct.data;
 
-							if (nodeToUpdate.id) {
-								helpers.createNode({
-									...nodeToUpdate,
-									id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
-									parent: null,
-									children: [],
-									internal: {
-										type: `BigCommerceNode`,
-										contentDigest: createContentDigest(nodeToUpdate)
-									}
-								});
+								await sleep(REQUEST_TIMEOUT);
 
-								logger.debug(`Updated node: ${nodeToUpdate.id}`);
-							}
+								if (nodeToUpdate.id) {
+									helpers.createNode({
+										...nodeToUpdate,
+										id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
+										parent: null,
+										children: [],
+										internal: {
+											type: `BigCommerceNode`,
+											contentDigest: createContentDigest(nodeToUpdate)
+										}
+									});
 
-							// Send a response back to the BigCommerce API
-							res.end("OK");
-						});
+									logger.debug(`Updated node: ${nodeToUpdate.id}`);
+								}
+
+								// Send a response back to the BigCommerce API
+								res.end("OK");
+							})
+						);
 
 						server.listen(8033, logger.info("Now listening to changes for live preview at /__BCPreview"));
 					})
