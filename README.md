@@ -17,11 +17,12 @@ This unofficial source plugin makes BigCommerce API data available in GatsbyJS s
 
 ## Features
 
-- Support for both `v2` and `v3` BigCommerce API versions
-- Enhanced `preview` mode for testing BigCommerce webhooks. Currently supports [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
-- Support for additional headers
-- Log level options for BigCommerce endpoint requests: `info`, `debug`, `warn`, `error`
+- Support for both `v2` and `v3` `bigcommerce` API versions
+- Log level options for `bigcommerce` endpoint requests: `info`, `debug`, `warn`, `error`
+- Support for enhanced `preview` mode for testing `bigcommerce` webhooks. Currently supports [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
 - Support for various response types: `json`, `xml`
+- Support for additional headers
+- Support for custom request timeout in all `bigcommerce` API requests
 
 ## Installation and Setup
 
@@ -102,7 +103,7 @@ options: {
 	options: {
 		preview: {
 			enabled: true
-			siteUrl: "https://example.com"
+			site_url: "https://example.com"
 		};
 	}
 }
@@ -141,7 +142,7 @@ Set the log level for the BigCommerce API requests. Supports `info`, `debug`, `w
 options: {
 	// ...
 
-	logLevel: "debug";
+	log_level: "debug";
 }
 ```
 
@@ -155,7 +156,21 @@ Set the response type for the BigCommerce API requests. Supports `json`, `xml`.
 options: {
 	// ...
 
-	responseType: "json";
+	response_type: "json";
+}
+```
+
+### Request Timeout
+
+Set a custom request timeout for the BigCommerce API requests (in milliseconds).
+
+**Default:** `10000`.
+
+```javascript
+options: {
+	// ...
+
+	request_timeout: 10000;
 }
 ```
 
@@ -164,8 +179,12 @@ options: {
 Assuming you correctly setup the plugin in `gatsby-config.js` and you have a `BigCommerceProducts` node name and its valid endpoint:
 
 ```javascript
-endpoints: {
-	BigCommerceProducts: "/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos";
+options: {
+	// ...
+
+	endpoints: {
+		BigCommerceProducts: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers";
+	}
 }
 ```
 
