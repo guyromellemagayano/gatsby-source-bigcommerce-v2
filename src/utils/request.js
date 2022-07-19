@@ -5,11 +5,12 @@ import { REQUEST_ACCEPT_HEADER, REQUEST_TIMEOUT } from "../constants";
 import { logger } from "./logger";
 
 class Request {
-	constructor(hostname, { headers = {}, response_type = "json", log_level = "debug" } = {}) {
+	constructor(hostname, { headers = {}, response_type = "json", log_level = "debug", request_timeout = REQUEST_TIMEOUT } = {}) {
 		this.hostname = hostname;
 		this.headers = headers;
 		this.response_type = response_type;
 		this.log_level = log_level;
+		this.request_timeout = request_timeout;
 	}
 
 	// Handle running plugin
@@ -20,7 +21,7 @@ class Request {
 			headers: this.headers,
 			responseType: this.response_type,
 			withCredentials: true,
-			timeout: REQUEST_TIMEOUT
+			timeout: this.request_timeout
 		});
 
 		// Override default `axios` instance

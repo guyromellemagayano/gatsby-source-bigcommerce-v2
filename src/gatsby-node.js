@@ -107,7 +107,8 @@ exports.pluginOptionsSchema = async ({ Joi }) => {
 			.default(false)
 			.description("The preview mode settings"),
 		log_level: Joi.string().default("debug").description("The log level to use"),
-		response_type: Joi.string().default("json").description("The response type to use")
+		response_type: Joi.string().default("json").description("The response type to use"),
+		request_timeout: Joi.number().default(REQUEST_TIMEOUT).description("The request timeout to use in milliseconds")
 	});
 };
 
@@ -123,7 +124,8 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		endpoints = null,
 		preview = false,
 		log_level = "debug",
-		response_type = "json"
+		response_type = "json",
+		request_timeout = REQUEST_TIMEOUT
 	} = pluginOptions;
 
 	// Prepare node sourcing helpers
@@ -140,7 +142,8 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		store_hash,
 		response_type,
 		headers,
-		log_level
+		log_level,
+		request_timeout
 	});
 
 	await Promise.allSettled(
