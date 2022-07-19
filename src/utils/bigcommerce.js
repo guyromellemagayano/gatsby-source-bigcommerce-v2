@@ -1,6 +1,8 @@
 "use strict";
 
+import sleep from "then-sleep";
 import { REQUEST_BIGCOMMERCE_API_URL } from "../constants";
+import { logger } from "./logger";
 import Request from "./request";
 
 class BigCommerce {
@@ -35,12 +37,11 @@ class BigCommerce {
 			request_timeout: this.request_timeout
 		});
 
-		const version = !path.includes("v3") ? path.replace(/(\?|$)/, "" + "$1") : path;
-
 		// Update full path
-		let fullPath = `/stores/${this.store_hash}`;
+		let fullPath = `/stores/${this.store_hash + path}`;
+		let endpointUrl = new URL(fullPath, REQUEST_BIGCOMMERCE_API_URL);
 
-		fullPath += version;
+		logger.info(`[${method.toUpperCase()}] ${endpointUrl}`);
 
 		// Run request
 		const { data } = await request.run(method, fullPath, body);
@@ -57,10 +58,10 @@ class BigCommerce {
 						const promises = [];
 
 						for (let nextPage = currentPage + 1; nextPage <= totalPages; nextPage++) {
-							const endpointUrl = new URL(fullPath, `https://${request.hostname}`);
-
 							// Safely assign `page` query parameter to endpoint URL.
 							endpointUrl.searchParams.set("page", nextPage);
+
+							logger.info(`[${method.toUpperCase()}] ${endpointUrl}`);
 
 							// Add promise to array for future Promise.allSettled() call.
 							promises.push(request.run(method, `${endpointUrl.pathname}${endpointUrl.search}`, body));
@@ -89,12 +90,18 @@ class BigCommerce {
 
 	// Handle `GET` request
 	async get(path) {
-		return await this.request("get", path);
+		await sleep(this.request_timeout);
+
+		const response = await this.request("get", path);
+		return response;
 	}
 
 	// Handle `POST` request
 	async post(path, body) {
-		return await this.request("post", path, body);
+		await sleep(this.request_timeout);
+
+		const response = await this.request("post", path, body);
+		return response;
 	}
 }
 
