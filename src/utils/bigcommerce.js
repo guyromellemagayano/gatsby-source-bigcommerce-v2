@@ -2,13 +2,12 @@
 
 import sleep from "then-sleep";
 import { REQUEST_BIGCOMMERCE_API_URL } from "../constants";
-import { logger } from "./logger";
 import Request from "./request";
 
 class BigCommerce {
 	constructor(config) {
 		if (!config) {
-			throw new Error("BigCommerce API config required. It is required to make any call to the BigCommerce API");
+			throw new Error("BigCommerce API config required. It is required to make any call to the API");
 		}
 
 		this.client_id = config.client_id;
@@ -41,12 +40,10 @@ class BigCommerce {
 		let fullPath = `/stores/${this.store_hash + path}`;
 		let endpointUrl = new URL(fullPath, REQUEST_BIGCOMMERCE_API_URL);
 
-		logger.info(`[${method.toUpperCase()}] ${endpointUrl}`);
-
 		// Run request
 		const { data } = await request.run(method, fullPath, body);
 
-		// If response contains pagination.
+		// If response contains pagination, run request again for each page
 		if (data && typeof data === "object" && Object.keys(data)?.length > 0) {
 			if ("meta" in data) {
 				if ("pagination" in data.meta) {
@@ -60,8 +57,6 @@ class BigCommerce {
 						for (let nextPage = currentPage + 1; nextPage <= totalPages; nextPage++) {
 							// Safely assign `page` query parameter to endpoint URL.
 							endpointUrl.searchParams.set("page", nextPage);
-
-							logger.info(`[${method.toUpperCase()}] ${endpointUrl}`);
 
 							// Add promise to array for future Promise.allSettled() call.
 							promises.push(request.run(method, `${endpointUrl.pathname}${endpointUrl.search}`, body));

@@ -5,17 +5,20 @@ import http from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import micro from "micro";
 import sleep from "then-sleep";
-import { BIGCOMMERCE_WEBHOOK_API_ENDPOINT, IS_DEV, REQUEST_TIMEOUT } from "./constants";
+import { BIGCOMMERCE_WEBHOOK_API_ENDPOINT, IS_DEV, REQUEST_BIGCOMMERCE_API_URL, REQUEST_TIMEOUT } from "./constants";
 import BigCommerce from "./utils/bigcommerce";
 import { convertObjectToString } from "./utils/convertValues";
 import { logger } from "./utils/logger";
 
 /**
- * ============================================================================
- * Helper functions
- * ============================================================================
+ * @description Create a node from the data
+ * @param {Object} item
+ * @param {string} nodeType
+ * @param {Object} helpers
+ * @param {string} endpoint
+ * @returns {Promise<void>} Node creation promise
  */
-const handleCreateNodeFromData = (item, nodeType, helpers) => {
+const handleCreateNodeFromData = (item, nodeType, helpers, endpoint) => {
 	const nodeMetadata = {
 		...item,
 		id: helpers.createNodeId(`${nodeType}-${item.id}`),
@@ -31,24 +34,24 @@ const handleCreateNodeFromData = (item, nodeType, helpers) => {
 
 	const node = Object.assign({}, item, nodeMetadata);
 
+	logger.warn(`[CREATE NODE] ${endpoint} - ${helpers.createNodeId(`${nodeType}-${item.id}`)}`);
+
 	helpers.createNode(node);
 
 	return node;
 };
 
 /**
- * ============================================================================
- * Verify plugin loads
- * ============================================================================
+ * @description Init the plugin
  */
 exports.onPreInit = () => {
 	logger.info("@epicdesignlabs/gatsby-source-bigcommerce plugin loaded successfully");
 };
 
 /**
- * ============================================================================
- * Validate plugin options
- * ============================================================================
+ * @description Validate the plugin options
+ * @param {Object} Joi
+ * @returns {Object} Joi schema
  */
 exports.pluginOptionsSchema = async ({ Joi }) => {
 	return Joi.object({
@@ -113,9 +116,12 @@ exports.pluginOptionsSchema = async ({ Joi }) => {
 };
 
 /**
- * ============================================================================
- * Source and cache nodes from the BigCommerce API
- * ============================================================================
+ * @description Source and cache nodes from the BigCommerce API
+ * @param {Object} actions
+ * @param {Object} createNodeId
+ * @param {Object} createContentDigest
+ * @param {Object} pluginOptions
+ * @returns {Promise<void>} Node creation promise
  */
 exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, pluginOptions) => {
 	// Prepare plugin options
@@ -146,110 +152,105 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		request_timeout
 	});
 
+	// Get the endpoints from the BigCommerce site and create nodes
 	await Promise.allSettled(
 		Object.entries(endpoints).map(
 			async ([nodeName, endpoint]) =>
 				await bigcommerce
 					.get(endpoint)
 					.then((res) => {
-						logger.info(`Success fetching data in ${endpoint}. Preparing data for node creation...`);
-
 						// If the data object is not on the response, it could be `v2` which returns an array as the root, so use that as a fallback
 						const resData = "data" in res && Array.isArray(res.data) ? res.data : res;
 
 						// Create node for each item in the response
 						return "data" in res && Array.isArray(res.data)
-							? resData.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers))
+							? resData.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint))
 							: Array.isArray(res)
-							? res.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers))
-							: handleCreateNodeFromData(resData, nodeName, helpers);
+							? res.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint))
+							: handleCreateNodeFromData(resData, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint);
 					})
 					.catch((err) => {
-						logger.error(`An error occurred while fetching BigCommerce endpoint data: ${err}`);
+						logger.error(`An error occurred while fetching endpoint data: ${err.message}`);
 
 						return err;
 					})
-					.finally(async () => {
-						logger.info("Fetching BigCommerce endpoint data done successfully");
+		)
+	).finally(async () => {
+		// If preview mode is enabled, create a preview node
+		if (IS_DEV && preview) {
+			if (!preview.enabled && typeof preview.enabled !== "boolean" && !preview.site_url && typeof preview.site_url !== "string" && preview.site_url?.length === 0) {
+				throw new Error("Incorrect preview settings. Check the `preview` object. It must have `enabled` and `site_url` properties set correctly.");
+			}
 
-						// If preview mode is enabled, create a preview node
-						if (IS_DEV && preview) {
-							if (!preview.enabled && typeof preview.enabled !== "boolean" && !preview.site_url && typeof preview.site_url !== "string" && preview.site_url?.length === 0) {
-								throw new Error("Incorrect preview settings. Check the `preview` object. It must have `enabled` and `site_url` properties set correctly.");
+			logger.warn("Subscribing you to BigCommerce API webhook...");
+
+			// Make a `POST` request to the BigCommerce API to subscribe to its webhook
+			const body = {
+				scope: "store/product/updated",
+				is_active: true,
+				destination: `${preview.site_url}/__BigcommercePreview`
+			};
+
+			await bigcommerce
+				.get(BIGCOMMERCE_WEBHOOK_API_ENDPOINT)
+				.then((res) => {
+					if ("data" in res && Object.keys(res.data).length > 0) {
+						logger.warn("BigCommerce API webhook subscription already exists. Skipping subscription...");
+						logger.info("BigCommerce API webhook subscription complete");
+						logger.warn("Running preview server...");
+					} else {
+						(async () =>
+							await bigcommerce.post(BIGCOMMERCE_WEBHOOK_API_ENDPOINT, body).then((res) => {
+								if ("data" in res && Object.keys(res.data).length > 0) {
+									logger.info("BigCommerce API webhook subscription created successfully.");
+									logger.info("Running preview server...");
+								}
+							}))();
+					}
+
+					// Start the preview server
+					const server = new http.createServer(
+						micro(async (req, res) => {
+							await sleep(request_timeout);
+
+							const request = await micro.json(req);
+							const productId = request.data.id;
+
+							// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
+							const newProduct = await bigcommerce.get(`/catalog/products/${productId}`);
+							const nodeToUpdate = newProduct.data;
+
+							if (nodeToUpdate.id) {
+								helpers.createNode({
+									...nodeToUpdate,
+									id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
+									parent: null,
+									children: [],
+									internal: {
+										type: "BigCommerceNode",
+										contentDigest: createContentDigest(nodeToUpdate)
+									}
+								});
+
+								if (this.log_level === "debug") {
+									logger.debug(`Updated node: ${nodeToUpdate.id}`);
+								}
 							}
 
-							logger.warn("Subscribing you to BigCommerce API webhook...");
+							// Send a response back to the BigCommerce API
+							res.end("OK");
+						})
+					);
 
-							// Make a `POST` request to the BigCommerce API to subscribe to its webhook
-							const body = {
-								scope: "store/product/updated",
-								is_active: true,
-								destination: `${preview.site_url}/__BCPreview`
-							};
+					server.listen(8033, logger.warn("Now listening to changes for live preview at /__BigcommercePreview"));
+				})
+				.catch((err) => {
+					logger.error(`An error occurred while creating BigCommerce API webhook subscription. ${err.message}`);
 
-							await bigcommerce
-								.get(BIGCOMMERCE_WEBHOOK_API_ENDPOINT)
-								.then((res) => {
-									if ("data" in res && Object.keys(res.data).length > 0) {
-										logger.info("BigCommerce API webhook subscription already exists. Skipping subscription...");
-										logger.info("BigCommerce API webhook subscription complete");
-										logger.info("Running preview server...");
-									} else {
-										(async () =>
-											await bigcommerce.post(BIGCOMMERCE_WEBHOOK_API_ENDPOINT, body).then((res) => {
-												if ("data" in res && Object.keys(res.data).length > 0) {
-													logger.info("BigCommerce API webhook subscription created successfully.");
-													logger.info("Running preview server...");
-												}
-											}))();
-									}
-
-									const server = new http.createServer(
-										micro(async (req, res) => {
-											await sleep(request_timeout);
-
-											const request = await micro.json(req);
-											const productId = request.data.id;
-
-											// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
-											const newProduct = await bigcommerce.get(`/catalog/products/${productId}`);
-											const nodeToUpdate = newProduct.data;
-
-											if (nodeToUpdate.id) {
-												helpers.createNode({
-													...nodeToUpdate,
-													id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
-													parent: null,
-													children: [],
-													internal: {
-														type: "BigCommerceNode",
-														contentDigest: createContentDigest(nodeToUpdate)
-													}
-												});
-
-												if (this.log_level === "debug") {
-													logger.debug(`Updated node: ${nodeToUpdate.id}`);
-												}
-											}
-
-											// Send a response back to the BigCommerce API
-											res.end("OK");
-										})
-									);
-
-									server.listen(8033, logger.info("Now listening to changes for live preview at /__BCPreview"));
-								})
-								.catch((err) => {
-									logger.error(`An error occurred while creating BigCommerce API webhook subscription. ${err}`);
-
-									throw err;
-								});
-						}
-
-						return true;
-					})
-		)
-	);
+					throw err;
+				});
+		}
+	});
 };
 
 /**
@@ -259,7 +260,7 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
  */
 exports.onCreateDevServer = ({ app }) =>
 	app.use(
-		"/__BCPreview/",
+		"/__BigcommercePreview/",
 		createProxyMiddleware({
 			target: `http://localhost:8033`,
 			secure: false
