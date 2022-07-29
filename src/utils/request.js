@@ -2,14 +2,13 @@
 
 import axios from "axios";
 import { REQUEST_ACCEPT_HEADER, REQUEST_TIMEOUT } from "../constants";
-import { logger } from "./logger";
 
 class Request {
-	constructor(hostname, { headers = {}, response_type = "json", log_level = "debug", request_timeout = REQUEST_TIMEOUT } = {}) {
+	constructor(hostname, { headers = {}, response_type = "json", log, request_timeout = REQUEST_TIMEOUT } = {}) {
 		this.hostname = hostname;
 		this.headers = headers;
 		this.response_type = response_type;
-		this.log_level = log_level;
+		this.log = log;
 		this.request_timeout = request_timeout;
 	}
 
@@ -32,7 +31,7 @@ class Request {
 		// Use `axios` interceptors for all HTTP methods (GET, POST, PUT, DELETE, etc.)
 		RequestAxiosInstance.interceptors.request.use(
 			(config) => {
-				logger.warn(`[${method.toUpperCase()}] ${this.hostname + path}`);
+				this.log.warn(`[${method.toUpperCase()}] ${this.hostname + path}`);
 
 				return config;
 			},
@@ -41,7 +40,7 @@ class Request {
 				if (err.code === "ETIMEDOUT") {
 					setTimeout(async () => {
 						// Send log message when restarting request
-						logger.warn(`[${method.toUpperCase()}] ${this.hostname + path} request timed out. Restarting request...`);
+						this.log.warn(`(${err.config.status + " " + err.config.statusText}) [${method.toUpperCase()}] ${this.hostname + path} request timed out. Restarting request...`);
 
 						// Restart request
 						await this.run(method, path, body)
@@ -58,12 +57,12 @@ class Request {
 		RequestAxiosInstance.interceptors.response.use(
 			(config) => {
 				// Send log message when endpoint request is successful
-				logger.info(`[${method.toUpperCase()}] ${this.hostname + path} - ${config.status}`);
+				this.log.info(`(${config.status + " " + config.statusText}) [${method.toUpperCase()}] ${this.hostname + path}`);
 
 				return config;
 			},
 			(res) => {
-				logger.info(`${res?.length || Object.keys(res)?.length} items found.`);
+				this.log.info(`${res?.length || Object.keys(res)?.length} items found.`);
 
 				return Promise.resolve(res);
 			},
@@ -71,7 +70,7 @@ class Request {
 				if (err.code === "ETIMEDOUT") {
 					setTimeout(async () => {
 						// Send log message when restarting request
-						logger.warn(`[${method.toUpperCase()}] ${this.hostname + path} request timed out. Restarting request...`);
+						this.log.warn(`(${err.config.status + " " + err.config.statusText}) [${method.toUpperCase()}] ${this.hostname + path} request timed out. Restarting request...`);
 
 						// Restart request
 						await this.run(method, path, body)

@@ -1,4 +1,3 @@
-/* eslint-disable no-prototype-builtins */
 "use strict";
 
 import http from "http";
@@ -16,9 +15,10 @@ import { logger } from "./utils/logger";
  * @param {string} nodeType
  * @param {Object} helpers
  * @param {string} endpoint
+ * @param {Object} log
  * @returns {Promise<void>} Node creation promise
  */
-const handleCreateNodeFromData = (item, nodeType, helpers, endpoint) => {
+const handleCreateNodeFromData = (item, nodeType, helpers, endpoint, log) => {
 	const nodeMetadata = {
 		...item,
 		id: helpers.createNodeId(`${nodeType}-${item.id}`),
@@ -34,18 +34,18 @@ const handleCreateNodeFromData = (item, nodeType, helpers, endpoint) => {
 
 	const node = Object.assign({}, item, nodeMetadata);
 
-	logger.warn(`[CREATE NODE] ${endpoint} - ${helpers.createNodeId(`${nodeType}-${item.id}`)}`);
+	helpers
+		.createNode(node)
+		.then(() => {
+			log.warn(`(OK) [CREATE NODE] ${endpoint} - ${helpers.createNodeId(`${nodeType}-${item.id}`)}`);
 
-	helpers.createNode(node);
+			return node;
+		})
+		.catch((err) => {
+			log.error(`(FAIL) [CREATE NODE] ${endpoint} - ${helpers.createNodeId(`${nodeType}-${item.id}`)}`, err.message);
 
-	return node;
-};
-
-/**
- * @description Init the plugin
- */
-exports.onPreInit = () => {
-	logger.info("@epicdesignlabs/gatsby-source-bigcommerce plugin loaded successfully");
+			throw err;
+		});
 };
 
 /**
@@ -53,8 +53,8 @@ exports.onPreInit = () => {
  * @param {Object} Joi
  * @returns {Object} Joi schema
  */
-exports.pluginOptionsSchema = async ({ Joi }) => {
-	return Joi.object({
+exports.pluginOptionsSchema = ({ Joi }) =>
+	Joi.object({
 		auth: Joi.object({
 			client_id: Joi.string()
 				.required()
@@ -113,7 +113,6 @@ exports.pluginOptionsSchema = async ({ Joi }) => {
 		response_type: Joi.string().default("json").description("The response type to use"),
 		request_timeout: Joi.number().default(REQUEST_TIMEOUT).description("The request timeout to use in milliseconds")
 	});
-};
 
 /**
  * @description Source and cache nodes from the BigCommerce API
@@ -134,6 +133,9 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		request_timeout = REQUEST_TIMEOUT
 	} = pluginOptions;
 
+	// Custom logger based on the `log_level` plugin option
+	const log = logger(log_level);
+
 	// Prepare node sourcing helpers
 	const helpers = Object.assign({}, actions, {
 		createContentDigest,
@@ -148,7 +150,7 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		store_hash,
 		response_type,
 		headers,
-		log_level,
+		log,
 		request_timeout
 	});
 
@@ -164,13 +166,13 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 
 						// Create node for each item in the response
 						return "data" in res && Array.isArray(res.data)
-							? resData.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint))
+							? resData.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint, log))
 							: Array.isArray(res)
-							? res.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint))
-							: handleCreateNodeFromData(resData, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint);
+							? res.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint, log))
+							: handleCreateNodeFromData(resData, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint, log);
 					})
 					.catch((err) => {
-						logger.error(`An error occurred while fetching endpoint data: ${err.message}`);
+						log.error(`An error occurred while fetching endpoint data: ${err.message}`);
 
 						return err;
 					})
@@ -182,7 +184,7 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 				throw new Error("Incorrect preview settings. Check the `preview` object. It must have `enabled` and `site_url` properties set correctly.");
 			}
 
-			logger.warn("Subscribing you to BigCommerce API webhook...");
+			log.warn("Subscribing you to BigCommerce API webhook...");
 
 			// Make a `POST` request to the BigCommerce API to subscribe to its webhook
 			const body = {
@@ -195,15 +197,15 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 				.get(BIGCOMMERCE_WEBHOOK_API_ENDPOINT)
 				.then((res) => {
 					if ("data" in res && Object.keys(res.data).length > 0) {
-						logger.warn("BigCommerce API webhook subscription already exists. Skipping subscription...");
-						logger.info("BigCommerce API webhook subscription complete");
-						logger.warn("Running preview server...");
+						log.warn("BigCommerce API webhook subscription already exists. Skipping subscription...");
+						log.info("BigCommerce API webhook subscription complete");
+						log.warn("Running preview server...");
 					} else {
 						(async () =>
 							await bigcommerce.post(BIGCOMMERCE_WEBHOOK_API_ENDPOINT, body).then((res) => {
 								if ("data" in res && Object.keys(res.data).length > 0) {
-									logger.info("BigCommerce API webhook subscription created successfully.");
-									logger.info("Running preview server...");
+									log.info("BigCommerce API webhook subscription created successfully.");
+									log.info("Running preview server...");
 								}
 							}))();
 					}
@@ -233,7 +235,7 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 								});
 
 								if (this.log_level === "debug") {
-									logger.debug(`Updated node: ${nodeToUpdate.id}`);
+									log.debug(`Updated node: ${nodeToUpdate.id}`);
 								}
 							}
 
@@ -242,10 +244,10 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 						})
 					);
 
-					server.listen(8033, logger.warn("Now listening to changes for live preview at /__BigcommercePreview"));
+					server.listen(8033, log.warn("Now listening to changes for live preview at /__BigcommercePreview"));
 				})
 				.catch((err) => {
-					logger.error(`An error occurred while creating BigCommerce API webhook subscription. ${err.message}`);
+					log.error(`An error occurred while creating BigCommerce API webhook subscription. ${err.message}`);
 
 					throw err;
 				});

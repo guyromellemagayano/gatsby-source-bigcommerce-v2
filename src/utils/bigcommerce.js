@@ -16,7 +16,7 @@ class BigCommerce {
 		this.store_hash = config.store_hash;
 		this.response_type = config.response_type;
 		this.headers = config.headers;
-		this.log_level = config.log_level;
+		this.log = config.log;
 		this.request_timeout = config.request_timeout;
 	}
 
@@ -32,7 +32,7 @@ class BigCommerce {
 				this.headers
 			),
 			response_type: this.response_type,
-			log_level: this.log_level,
+			log: this.log,
 			request_timeout: this.request_timeout
 		});
 

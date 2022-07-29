@@ -25,9 +25,10 @@ addColors(logLevels.colors);
 const { combine, timestamp, colorize, simple } = format;
 
 // Init `winston` logger
-export const logger = createLogger({
-	level: "debug",
-	levels: logLevels.levels,
-	format: combine(colorize(), simple(), timestamp()),
-	transports: [new transports.Console()]
-});
+export const logger = (log_level) =>
+	createLogger({
+		level: log_level || "info",
+		levels: logLevels.levels,
+		format: combine(colorize(), simple(), timestamp()),
+		transports: [new transports.Console()]
+	});
