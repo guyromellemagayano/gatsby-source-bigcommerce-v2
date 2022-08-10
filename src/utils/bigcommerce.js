@@ -21,7 +21,9 @@ class BigCommerce {
 	}
 
 	// Handle API requests
-	async request(method, path, body = null) {
+	async request(method, path, body = null, headers = {}) {
+		await sleep(this.request_timeout);
+
 		// Prepare `path` for request execution
 		const request = new Request(REQUEST_BIGCOMMERCE_API_URL, {
 			headers: Object.assign(
@@ -29,7 +31,8 @@ class BigCommerce {
 					"X-Auth-Client": this.client_id,
 					"X-Auth-Token": this.access_token
 				},
-				this.headers
+				this.headers,
+				headers
 			),
 			response_type: this.response_type,
 			log: this.log,
@@ -84,18 +87,18 @@ class BigCommerce {
 	}
 
 	// Handle `GET` request
-	async get(path) {
+	async get(path, headers = {}) {
 		await sleep(this.request_timeout);
 
-		const response = await this.request("get", path);
+		const response = await this.request("get", path, headers);
 		return response;
 	}
 
 	// Handle `POST` request
-	async post(path, body) {
+	async post(path, body, headers = {}) {
 		await sleep(this.request_timeout);
 
-		const response = await this.request("post", path, body);
+		const response = await this.request("post", path, body, headers);
 		return response;
 	}
 }
