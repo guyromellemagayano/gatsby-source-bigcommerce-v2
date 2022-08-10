@@ -37,7 +37,7 @@ class Request {
 			},
 			(req) => Promise.resolve(req),
 			(err) => {
-				if (err.code === "ETIMEDOUT") {
+				if (err.code === "ETIMEDOUT" || err.code === "ECONNRESET") {
 					setTimeout(async () => {
 						// Send log message when restarting request
 						this.log.warn(`(${err.config.status + " " + err.config.statusText}) [${method.toUpperCase()}] ${this.hostname + path} request timed out. Restarting request...`);
@@ -67,7 +67,7 @@ class Request {
 				return Promise.resolve(res);
 			},
 			(err) => {
-				if (err.code === "ETIMEDOUT") {
+				if (err.code === "ETIMEDOUT" || err.code === "ECONNRESET") {
 					setTimeout(async () => {
 						// Send log message when restarting request
 						this.log.warn(`(${err.config.status + " " + err.config.statusText}) [${method.toUpperCase()}] ${this.hostname + path} request timed out. Restarting request...`);
