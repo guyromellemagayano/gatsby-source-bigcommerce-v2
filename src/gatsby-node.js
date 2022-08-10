@@ -128,7 +128,7 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		auth: { client_id = null, secret = null, access_token = null, store_hash = null, headers = {} },
 		endpoints = null,
 		preview = false,
-		log_level = "debug",
+		log_level = "info",
 		response_type = "json",
 		request_timeout = REQUEST_TIMEOUT
 	} = pluginOptions;

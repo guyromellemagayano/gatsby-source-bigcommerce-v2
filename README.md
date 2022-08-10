@@ -136,13 +136,13 @@ options: {
 
 Set the log level for the BigCommerce API requests. Supports `info`, `debug`, `warn`, `error`.
 
-**Default:** `debug`.
+**Default:** `info`.
 
 ```javascript
 options: {
 	// ...
 
-	log_level: "debug";
+	log_level: "info";
 }
 ```
 
