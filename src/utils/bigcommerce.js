@@ -10,8 +10,6 @@ class BigCommerce {
 			throw new Error("BigCommerce API config required. It is required to make any call to the API");
 		}
 
-		this.client_id = config.client_id;
-		this.access_token = config.access_token;
 		this.secret = config.secret;
 		this.store_hash = config.store_hash;
 		this.response_type = config.response_type;
@@ -26,14 +24,7 @@ class BigCommerce {
 
 		// Prepare `path` for request execution
 		const request = new Request(REQUEST_BIGCOMMERCE_API_URL, {
-			headers: Object.assign(
-				{
-					"X-Auth-Client": this.client_id,
-					"X-Auth-Token": this.access_token
-				},
-				this.headers,
-				headers
-			),
+			headers: Object.assign(this.headers, headers),
 			response_type: this.response_type,
 			log: this.log,
 			request_timeout: this.request_timeout

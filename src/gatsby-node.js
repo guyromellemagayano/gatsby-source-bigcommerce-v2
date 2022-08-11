@@ -4,7 +4,7 @@ import http from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import micro from "micro";
 import sleep from "then-sleep";
-import { BIGCOMMERCE_WEBHOOK_API_ENDPOINT, IS_DEV, REQUEST_BIGCOMMERCE_API_URL, REQUEST_TIMEOUT } from "./constants";
+import { ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, BIGCOMMERCE_WEBHOOK_API_ENDPOINT, CORS_ORIGIN, IS_DEV, REQUEST_BIGCOMMERCE_API_URL, REQUEST_TIMEOUT } from "./constants";
 import BigCommerce from "./utils/bigcommerce";
 import { convertObjectToString } from "./utils/convertValues";
 import { logger } from "./utils/logger";
@@ -109,7 +109,7 @@ exports.pluginOptionsSchema = ({ Joi }) =>
 		})
 			.default(false)
 			.description("The preview mode settings"),
-		log_level: Joi.string().default("debug").description("The log level to use"),
+		log_level: Joi.string().default("info").description("The log level to use"),
 		response_type: Joi.string().default("json").description("The response type to use"),
 		request_timeout: Joi.number().default(REQUEST_TIMEOUT).description("The request timeout to use in milliseconds")
 	});
@@ -149,7 +149,13 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		secret,
 		store_hash,
 		response_type,
-		headers,
+		headers: Object.assign(headers, {
+			"X-Auth-Client": client_id,
+			"X-Auth-Token": access_token,
+			"Access-Control-Allow-Headers": ACCESS_CONTROL_ALLOW_HEADERS,
+			"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS,
+			"Access-Control-Allow-Origin": CORS_ORIGIN
+		}),
 		log,
 		request_timeout
 	});
@@ -245,6 +251,8 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 					);
 
 					server.listen(8033, log.warn("Now listening to changes for live preview at /__BigcommercePreview"));
+
+					return res;
 				})
 				.catch((err) => {
 					log.error(`An error occurred while creating BigCommerce API webhook subscription. ${err.message}`);
@@ -252,6 +260,10 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 					throw err;
 				});
 		}
+
+		log.info("@epicdesignlabs/gatsby-source-bigcommerce task processing complete!");
+
+		return;
 	});
 };
 
