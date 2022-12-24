@@ -1,18 +1,19 @@
 {
 	"name": "@epicdesignlabs/gatsby-source-bigcommerce",
 	"version": "2.0.11",
-	"description": "This official source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
+	"description": "This unofficial source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
 	"scripts": {
 		"build": "babel ./src/ --out-dir ./ --source-maps",
+		"commit": "git-cz",
 		"watch": "babel ./src/ --out-dir ./ --source-maps --watch",
-		"lint:eslint": "eslint './src/**/*.js' --quiet --fix --color --ignore-path .gitignore",
-		"lint:prettier": "prettier './src/**/*.js' --write --ignore-path .gitignore",
-		"lint": "npm run lint:eslint && npm run lint:prettier",
-		"test": "npm run lint",
-		"prepare": "cross-env NODE_ENV=production npm run build",
-		"validate": "npm run lint",
-		"ci:validate": "rm -rf node_modules && npm ci && npm run validate",
-		"prepublishOnly": "npm run ci:validate && npm run build"
+		"lint:eslint": "eslint \"./src/**/*.js\" --quiet --fix --color --ignore-path .gitignore",
+		"lint:prettier": "prettier \"./src/**/*.js\" --write --ignore-path .gitignore",
+		"lint": "yarn lint:eslint && yarn lint:prettier",
+		"test": "yarn lint",
+		"prepare": "cross-env NODE_ENV=production yarn build",
+		"validate": "yarn lint",
+		"ci:validate": "rm -rf node_modules && yarn install --frozen-lockfile && yarn validate",
+		"prepublishOnly": "yarn ci:validate && yarn build"
 	},
 	"homepage": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/blob/master/README.md",
 	"repository": {
@@ -56,11 +57,11 @@
 	"main": "index.js",
 	"dependencies": {
 		"axios": "^0.27.2",
+		"gatsby": "^5.3.3",
+		"gatsby-source-filesystem": "^5.3.1",
 		"http-proxy-middleware": "^2.0.4",
 		"lodash": "^4.17.21",
-		"micro": "^9.3.4",
-		"then-sleep": "^1.0.1",
-		"winston": "^3.8.1"
+		"micro": "^10.0.1"
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.18.6",
@@ -75,20 +76,19 @@
 		"commitizen": "^4.2.4",
 		"cross-env": "^7.0.3",
 		"cz-conventional-changelog": "^3.3.0",
+		"eslint": "^8.19.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-babel": "^5.3.1",
 		"eslint-plugin-prettier": "^4.2.1",
 		"eslint-plugin-react": "^7.30.1",
-		"eslint": "^8.19.0",
 		"gatsby-core-utils": "^4.3.1",
-		"gatsby": "^4.18.2",
 		"husky": "^8.0.1",
 		"lint-staged": "^13.0.3",
 		"prettier": "^2.7.1",
 		"react": "^18.2.0"
 	},
 	"peerDependencies": {
-		"gatsby": ">3.0.0"
+		"gatsby": ">4.0.0"
 	},
 	"bugs": {
 		"url": "https://github.com/Epic-Design-Labs/gatsby-source-bigcommerce/issues"
@@ -103,7 +103,7 @@
 	},
 	"husky": {
 		"hooks": {
-			"pre-commit": "lint-staged",
+			"pre-commit": "yarn lint-staged --allow-empty",
 			"prepare-commit-msg": "exec < /dev/tty && git cz --hook || true",
 			"commit": "cz",
 			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
@@ -111,15 +111,9 @@
 	},
 	"lint-staged": {
 		"**/*.{js,jsx,md,mdx,json}": [
-			"npm run lint",
+			"yarn lint",
 			"git add"
 		]
 	},
-	"engines": {
-		"node": ">=16.15.1"
-	},
-	"volta": {
-		"node": "16.16.0",
-		"npm": "8.14.0"
-	}
+	"packageManager": "yarn@3.3.1"
 }
