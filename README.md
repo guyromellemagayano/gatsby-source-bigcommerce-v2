@@ -12,17 +12,21 @@ This unofficial source plugin makes BigCommerce API data available in GatsbyJS s
 ![GitHub contributors](https://img.shields.io/github/contributors/Epic-Design-Labs/gatsby-source-bigcommerce)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/Epic-Design-Labs/gatsby-source-bigcommerce)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/y/Epic-Design-Labs/gatsby-source-bigcommerce)
-![npms.io (final)](https://img.shields.io/npms-io/maintenance-score/@epicdesignlabs/gatsby-source-bigcommerce)
-![npms.io (final)](https://img.shields.io/npms-io/quality-score/@epicdesignlabs/gatsby-source-bigcommerce)
 
 ## Features
 
+Provide support for the following features:
+
 - Support for both `v2` and `v3` `bigcommerce` API versions
-- Log level options for `bigcommerce` endpoint requests: `info`, `debug`, `warn`, `error`
+- Multiple `bigcommerce` API versions
+- Multiple, additional custom headers
+- Custom request timeout in all `bigcommerce` API requests
+- Data caching on subsequent `gatsby` source plugin runs
+- Request timeouts in all `bigcommerce` API requests
+- Throttling, debouncing, and adjusting the number of concurrent `bigcommerce` API requests
+- Option for opting out of type inference for `optimizely/episerver` API `gatsby` nodes or add custom `gatsby` node schemas for `optimizely/episerver` API `gatsby` nodes
 - Support for enhanced `preview` mode for testing `bigcommerce` webhooks. Currently supports [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
 - Support for various response types: `json`, `xml`
-- Support for additional headers
-- Support for custom request timeout in all `bigcommerce` API requests
 
 ## Installation and Setup
 
@@ -38,59 +42,55 @@ For `yarn`:
 yarn add @epicdesignlabs/gatsby-source-bigcommerce
 ```
 
-Setup this plugin in `gatsby-config.js` as follows:
+Setup this plugin in `gatsby-config.js` as follows **_(\*required fields)_**:
 
 ```javascript
 module.exports = {
-	// ...
+  // ...
 
-	plugins: [
-		// ...
+  plugins: [
+    // ...
 
-		{
-			resolve: "@epicdesignlabs/gatsby-source-bigcommerce",
-			options: {
-				auth: {
-					client_id: process.env.BIGCOMMERCE_API_CLIENT_ID // The client ID of your BigCommerce store.,
-					secret: process.env.BIGCOMMERCE_API_SECRET_KEY // The secret key of your BigCommerce store.,
-					access_token: process.env.BIGCOMMERCE_API_ACCESS_TOKEN // The access token of your BigCommerce store.,
-					store_hash: process.env.BIGCOMMERCE_API_STORE_HASH // The store hash of your BigCommerce store.,
-				},
-				endpoints: {
-					BigCommerceProducts: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers"
-				}
-			}
-		}
-	]
+    {
+      resolve: "@epicdesignlabs/gatsby-source-bigcommerce",
+      options: {
+        auth: {
+          client_id: process.env.BIGCOMMERCE_API_CLIENT_ID // The client ID of your BigCommerce store.,
+          secret: process.env.BIGCOMMERCE_API_SECRET_KEY // The secret key of your BigCommerce store.,
+          access_token: process.env.BIGCOMMERCE_API_ACCESS_TOKEN // The access token of your BigCommerce store.,
+          store_hash: process.env.BIGCOMMERCE_API_STORE_HASH // The store hash of your BigCommerce store.,
+        },
+        endpoints: [
+          {
+            nodeName: "BigCommerceProducts",
+            endpoint: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers",
+            schema: null
+          },
+          {
+            nodeName: "BigCommerceCategories",
+            endpoint: "/v3/catalog/categories",
+            schema: null
+          },
+          {
+            nodeName: "BigCommerceStore",
+            endpoint: "/v2/store",
+            schema: `
+              type BigCommerceStore implements Node {
+                account_uuid: String
+                domain: String
+                secure_url: String
+                control_panel_base_url: String
+              }
+            `
+          }
+        ]
+      }
+    }
+  ]
 };
 ```
 
 ## Configuration Options
-
-### Endpoints
-
-Add a single or multiple `endpoints`. Also supports `v2` and `v3` API endpoint versions. You can find a list of endpoints [here](https://developer.bigcommerce.com/api-reference/).
-
-```javascript
-options: {
-	// ...
-
-	endpoints: {
-		// Single endpoint
-		BigCommerceProducts: "/v3/catalog/products?include=images,variants,custom_fields,options,modifiers,videos",
-
-		// Multiple endpoints
-		BigCommerceStore: "/v2/store",
-		BigCommercePageContent: "/v2/pages?limit=250",
-		BigCommerceCategories: "/v3/catalog/categories?limit=250",
-		BigCommerceBrands: "/v3/catalog/brands?limit=250",
-		BigCommercePages: "/v3/content/pages?limit=250",
-		BigCommerceCategories: "/v3/catalog/categories",
-		BigCommerceCategoriesTree: "/v3/catalog/categories/tree",
-		BigCommerceBrands: "/v3/catalog/brands"
-	}
-}
-```
 
 ### Preview
 
@@ -98,14 +98,12 @@ To properly enable preview mode, deploy a site instance in the server (currently
 
 ```javascript
 options: {
-	// ...
+  // ...
 
-	options: {
-		preview: {
-			enabled: true
-			site_url: "https://example.com"
-		};
-	}
+  preview: {
+    enabled: true;
+    site_url: "https://example.com";
+  }
 }
 ```
 
@@ -115,34 +113,102 @@ Add additional headers to the request as follows:
 
 ```javascript
 options: {
-	// ...
+// ...
 
-	auth: {
-		headers: {
-			// Single header
-			"X-Custom-Header": "Custom Value",
+auth: {
+  headers: {
+      // Single header
+      "X-Custom-Header": "Custom Value",
 
-			// Mutiple headers
-			"Access-Control-Allow-Headers": "Custom Value",
-			"Access-Control-Allow-Credentials": "Custom Value",
-			"Access-Control-Allow-Origin": "Custom Value",
-			"Access-Control-Allow-Methods": "Custom Value"
-		}
-	}
+      // Mutiple headers
+      "Access-Control-Allow-Headers": "Custom Value",
+      "Access-Control-Allow-Credentials": "Custom Value",
+      "Access-Control-Allow-Origin": "Custom Value",
+      "Access-Control-Allow-Methods": "Custom Value"
+    }
+  }
 }
 ```
 
-### Log Level
+### Endpoints
 
-Set the log level for the BigCommerce API requests. Supports `info`, `debug`, `warn`, `error`.
+Add a single or multiple `endpoints`. Also supports `v2` and `v3` API endpoint versions. You can find a list of endpoints [here](https://developer.bigcommerce.com/api-reference/).
 
-**Default:** `info`.
+> **Note**: The `endpoints` should start with `/<BIGCOMMERCE_ENDPOINT_VERSION>/**/*` as the base URL will be added automatically to the `bigcommerce` `hostname` value.
 
 ```javascript
 options: {
-	// ...
+  // ...
 
-	log_level: "info";
+  endpoints: [
+    // Single endpoint
+    {
+      nodeName: "BigCommerceProducts",
+      endpoint: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers",
+      schema: null
+    },
+
+    // Multiple endpoints
+    {
+      nodeName: "BigCommerceCategories",
+      endpoint: "/v3/catalog/categories",
+      schema: null
+    },
+    {
+      nodeName: "BigCommerceStore",
+      endpoint: "/v2/store",
+      schema: `
+        type BigCommerceStore implements Node {
+          account_uuid: String
+          domain: String
+          secure_url: String
+          control_panel_base_url: String
+        }
+      `
+    }
+  ];
+}
+```
+
+### Global Schema
+
+Add a global schema to all `endpoints`. This will be merged with the `endpoint` schema. This is useful for adding global types that affect multiple `endpoints`.
+
+```javascript
+options: {
+  // ...
+
+  globals: {
+    schema: `
+      type BigCommerceId {
+        bigcommerce_id: Int
+      }
+    `
+  },
+  endpoints: [
+    {
+      nodeName: "BigCommerceProducts",
+      endpoint: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers",
+      schema: null
+    },
+    {
+      nodeName: "BigCommerceCategories",
+      endpoint: "/v3/catalog/categories",
+      schema: null
+    },
+    {
+      nodeName: "BigCommerceStore",
+      endpoint: "/v2/store",
+      schema: `
+        type BigCommerceStore implements Node {
+          account_uuid: String
+          domain: String
+          secure_url: String
+          control_panel_base_url: String
+        }
+      `
+    }
+  ]
 }
 ```
 
@@ -154,23 +220,65 @@ Set the response type for the BigCommerce API requests. Supports `json`, `xml`.
 
 ```javascript
 options: {
-	// ...
+  // ...
 
-	response_type: "json";
+  response_type: "json";
 }
 ```
 
 ### Request Timeout
 
-Set a custom request timeout for the BigCommerce API requests (in milliseconds).
+Set a custom request timeout for the Optimizely/Episerver API requests (in milliseconds).
 
-**Default:** `0`.
+**Default:** `60000` _(60 seconds)_.
 
 ```javascript
 options: {
-	// ...
+  // ...
 
-	request_timeout: 0;
+  request_timeout: 60000;
+}
+```
+
+### Request Throttling
+
+Set a custom request throttling interval for the Optimizely/Episerver API requests (in milliseconds).
+
+**Default:** `500` _(0.5 seconds)_.
+
+```javascript
+options: {
+  // ...
+
+  request_throttle_interval: 500;
+}
+```
+
+### Request Debouncing
+
+Set a custom request debouncing interval for the Optimizely/Episerver API requests (in milliseconds).
+
+**Default:** `500` _(0.5 seconds)_.
+
+```javascript
+options: {
+  // ...
+
+  request_debounce_interval: 500;
+}
+```
+
+### Request Concurrency
+
+Set a custom request concurrency for the Optimizely/Episerver API requests.
+
+**Default:** `100`.
+
+```javascript
+options: {
+  // ...
+
+  request_concurrency: 100;
 }
 ```
 
@@ -180,11 +288,11 @@ Assuming you correctly setup the plugin in `gatsby-config.js` and you have a `Bi
 
 ```javascript
 options: {
-	// ...
+  // ...
 
-	endpoints: {
-		BigCommerceProducts: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers";
-	}
+  endpoints: {
+    BigCommerceProducts: "/v3/catalog/products?include=variants,images,custom_fields,bulk_pricing_rules,primary_image,videos,options,modifiers";
+  }
 }
 ```
 
@@ -192,39 +300,40 @@ you can query the data as follows:
 
 ```graphql
 {
-	allBigCommerceProducts {
-		nodes {
-			name
-			price
-			id
-			sku
-			variants {
-				id
-				product_id
-				price
-				cost_price
-				image_url
-				sku
-			}
-			reviews_count
-			reviews_rating_sum
-			page_title
-			images {
-				id
-				description
-				product_id
-				date_modified
-			}
-			bigcommerce_id
-			brand_id
-			custom_url {
-				url
-			}
-			categories
-			availability
-		}
-		totalCount
-	}
+  allBigCommerceProducts {
+    edges {
+      nodes {
+        name
+        price
+        id
+        sku
+        variants {
+          id
+          product_id
+          price
+          cost_price
+          image_url
+          sku
+        }
+        reviews_count
+        reviews_rating_sum
+        page_title
+        images {
+          id
+          description
+          product_id
+          date_modified
+        }
+        bigcommerce_id
+        brand_id
+        custom_url {
+          url
+        }
+        categories
+        availability
+      }
+    }
+  }
 }
 ```
 
@@ -239,10 +348,6 @@ This source code is licensed under the **MIT** license found in the [LICENSE](LI
 ## Author
 
 [**Epic Design Labs**](https://epicdesignlabs.com)
-
-## License
-
-Released under the [MIT license](LICENSE).
 
 ## Credits
 
