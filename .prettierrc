@@ -3,8 +3,6 @@
 	"trailingComma": "none",
 	"singleQuote": false,
 	"printWidth": 240,
-	"useTabs": true,
-	"tabWidth": 2,
 	"quoteProps": "consistent",
 	"proseWrap": "preserve",
 	"arrowParens": "always",
