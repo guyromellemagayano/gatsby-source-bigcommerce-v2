@@ -25,7 +25,6 @@ Provide support for the following features:
 - Request timeouts in all `bigcommerce` API requests
 - Throttling, debouncing, and adjusting the number of concurrent `bigcommerce` API requests
 - Option for opting out of type inference for `optimizely/episerver` API `gatsby` nodes or add custom `gatsby` node schemas for `optimizely/episerver` API `gatsby` nodes
-- Support for enhanced `preview` mode for testing `bigcommerce` webhooks. Currently supports [**Gatsby Cloud**](https://www.gatsbyjs.com/products/cloud/)
 - Support for various response types: `json`, `xml`
 
 ## Installation and Setup
@@ -91,21 +90,6 @@ module.exports = {
 ```
 
 ## Configuration Options
-
-### Preview
-
-To properly enable preview mode, deploy a site instance in the server (currently supports **Gatsby Cloud**), get your preview URL and add it under the key `siteUrl` and set the `preview` mode to `true` to options as shown. Default is `false`.
-
-```javascript
-options: {
-  // ...
-
-  preview: {
-    enabled: true;
-    site_url: "https://example.com";
-  }
-}
-```
 
 ### Additional Headers
 

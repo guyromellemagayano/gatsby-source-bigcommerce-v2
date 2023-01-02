@@ -1,8 +1,6 @@
 "use strict";
 
 import { randomUUID } from "crypto";
-import express from "express";
-import http from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import _ from "lodash";
 import {
@@ -10,10 +8,8 @@ import {
 	ACCESS_CONTROL_ALLOW_HEADERS,
 	APP_NAME,
 	AUTH_HEADERS,
-	BIGCOMMERCE_WEBHOOK_API_ENDPOINT,
 	CACHE_KEY,
 	CORS_ORIGIN,
-	IS_DEV,
 	REQUEST_BIGCOMMERCE_API_URL,
 	REQUEST_CONCURRENCY,
 	REQUEST_DEBOUNCE_INTERVAL,
@@ -23,7 +19,7 @@ import {
 } from "./constants";
 import { BigCommerce } from "./libs/bigcommerce";
 import { convertObjectToString, convertStringToCamelCase } from "./utils/convertValues";
-import { isArrayType, isBooleanType, isEmpty, isObjectType, isStringType } from "./utils/typeCheck";
+import { isArrayType, isEmpty, isObjectType } from "./utils/typeCheck";
 
 /**
  * @description Camelize keys of an object
@@ -170,18 +166,6 @@ exports.pluginOptionsSchema = ({ Joi }) =>
 				schema: Joi.string().allow(null).default(null).description("The schema to use for the node")
 			})
 			.description("The endpoints to create nodes for"),
-		preview: Joi.object({
-			site_url: Joi.string()
-				.required()
-				.messages({
-					"string.empty": "The `preview.site_url` is empty. Please provide a valid URL.",
-					"string.required": "The `preview.site_url` is required."
-				})
-				.description("The site URL"),
-			enabled: Joi.boolean().default(false).description("Enable preview mode")
-		})
-			.default(false)
-			.description("The preview mode settings"),
 		response_type: Joi.string().default(REQUEST_RESPONSE_TYPE).description("The response type to use"),
 		request_timeout: Joi.number().default(REQUEST_TIMEOUT).description("The request timeout to use in milliseconds"),
 		request_throttle_interval: Joi.number().default(REQUEST_THROTTLE_INTERVAL).description("The request throttle interval to use in milliseconds"),
@@ -202,7 +186,6 @@ exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, cre
 	const {
 		auth: { client_id = null, secret = null, access_token = null, store_hash = null, headers = AUTH_HEADERS },
 		endpoints = [],
-		preview = false,
 		response_type = REQUEST_RESPONSE_TYPE,
 		request_timeout = REQUEST_TIMEOUT,
 		request_throttle_interval = REQUEST_THROTTLE_INTERVAL,
@@ -329,97 +312,6 @@ exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, cre
 
 				// Reject the promise
 				return err;
-			})
-			.finally(async () => {
-				// If preview mode is enabled, create a preview node
-				if (IS_DEV && preview) {
-					if (!preview?.enabled && !isBooleanType(preview?.enabled) && !isStringType(preview.site_url) && isEmpty(preview.site_url)) {
-						throw new Error("Incorrect preview settings. Check the `preview` object. It must have `enabled` and `site_url` properties set correctly.");
-					}
-
-					console.warn(`[WEBHOOK] Subscribing you to BigCommerce API webhook...`);
-
-					// Make a `POST` request to the BigCommerce API to subscribe to its webhook
-					const body = {
-						scope: "store/product/updated",
-						is_active: true,
-						destination: `${preview.site_url}/__BigcommercePreview`
-					};
-
-					// Express app to handle the webhook
-					const app = express(async (req, res) => {
-						const request = await app.json(req);
-						const productId = request.data.id;
-
-						// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
-						const newProduct = await bigcommerce.get(`/catalog/products/${productId}`);
-						const nodeToUpdate = newProduct.data;
-
-						if (nodeToUpdate.id) {
-							helpers.createNode({
-								...nodeToUpdate,
-								id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
-								parent: null,
-								children: [],
-								internal: {
-									type: "BigCommerceNode",
-									contentDigest: createContentDigest(nodeToUpdate)
-								}
-							});
-
-							console.info(`[NODE] Updated node: ${nodeToUpdate.id}`);
-						}
-
-						// Send a response back to the BigCommerce API
-						res.end("OK");
-					});
-
-					await bigcommerce
-						.get({
-							url: BIGCOMMERCE_WEBHOOK_API_ENDPOINT,
-							headers: {
-								...headers,
-								"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS
-							}
-						})
-						.then(async (res) => {
-							if (!isEmpty(res) && "data" in res) {
-								console.warn(`[WEBHOOK] BigCommerce API webhook subscription already exists. Skipping subscription...`);
-								console.info(`[WEBHOOK] BigCommerce API webhook subscription complete`);
-								console.warn(`[PREVIEW] Running preview server...`);
-							} else {
-								await bigcommerce
-									.post({
-										url: BIGCOMMERCE_WEBHOOK_API_ENDPOINT,
-										body,
-										headers: {
-											...headers,
-											"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS
-										}
-									})
-									.then((res) => {
-										if (!isEmpty(res) && "data" in res) {
-											console.info(`[WEBHOOK] BigCommerce API webhook subscription created successfully.`);
-											console.info(`[PREVIEW] Running preview server...`);
-										}
-									});
-							}
-
-							// Start the preview server
-							const server = new http.createServer(app);
-
-							server.listen(8033, console.warn(`[PREVIEW] Now listening to changes for live preview at /__BigcommercePreview`));
-
-							return res;
-						})
-						.catch((err) => {
-							console.error(`[WEBHOOK] ${err?.message || convertObjectToString(err) || "An error occurred while subscribing to BigCommerce via webhook. Please try again later."}`, "\n");
-
-							throw err;
-						});
-				}
-
-				return;
 			});
 	}
 
@@ -472,7 +364,7 @@ exports.onCreateDevServer = ({ app }) =>
 	app.use(
 		"/__BigcommercePreview/",
 		createProxyMiddleware({
-			target: `http://localhost:4000`,
+			target: `http://localhost:8033`,
 			secure: false
 		})
 	);
