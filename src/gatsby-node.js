@@ -1,13 +1,50 @@
 "use strict";
 
+import { randomUUID } from "crypto";
+import express from "express";
 import http from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import micro from "micro";
-import sleep from "then-sleep";
-import { ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, BIGCOMMERCE_WEBHOOK_API_ENDPOINT, CORS_ORIGIN, IS_DEV, REQUEST_BIGCOMMERCE_API_URL, REQUEST_TIMEOUT } from "./constants";
-import BigCommerce from "./utils/bigcommerce";
-import { convertObjectToString } from "./utils/convertValues";
-import { logger } from "./utils/logger";
+import _ from "lodash";
+import {
+	ACCESS_CONTROL_ALLOW_CREDENTIALS,
+	ACCESS_CONTROL_ALLOW_HEADERS,
+	APP_NAME,
+	AUTH_HEADERS,
+	BIGCOMMERCE_WEBHOOK_API_ENDPOINT,
+	CACHE_KEY,
+	CORS_ORIGIN,
+	IS_DEV,
+	REQUEST_BIGCOMMERCE_API_URL,
+	REQUEST_CONCURRENCY,
+	REQUEST_DEBOUNCE_INTERVAL,
+	REQUEST_RESPONSE_TYPE,
+	REQUEST_THROTTLE_INTERVAL,
+	REQUEST_TIMEOUT
+} from "./constants";
+import { BigCommerce } from "./libs/bigcommerce";
+import { convertObjectToString, convertStringToCamelCase } from "./utils/convertValues";
+import { isArrayType, isBooleanType, isEmpty, isObjectType, isStringType } from "./utils/typeCheck";
+
+/**
+ * @description Camelize keys of an object
+ * @param {Object} obj
+ * @returns {Object} Object with camelCase keys
+ */
+const handleCamelizeKeys = (obj) => {
+	if (isArrayType(obj) && !isEmpty(obj)) {
+		return obj?.map((item) => handleCamelizeKeys(item));
+	} else if (isObjectType(obj) && !isEmpty(obj)) {
+		return Object.keys(obj).reduce(
+			(result, key) => ({
+				...result,
+				[convertStringToCamelCase(key)]: handleCamelizeKeys(obj[key])
+			}),
+			{}
+		);
+	}
+
+	return obj;
+};
 
 /**
  * @description Create a node from the data
@@ -15,37 +52,40 @@ import { logger } from "./utils/logger";
  * @param {string} nodeType
  * @param {Object} helpers
  * @param {string} endpoint
- * @param {Object} log
  * @returns {Promise<void>} Node creation promise
  */
-const handleCreateNodeFromData = (item, nodeType, helpers, endpoint, log) => {
-	const nodeMetadata = {
-		...item,
-		id: helpers.createNodeId(`${nodeType}-${item.id}`),
-		bigcommerce_id: item.id,
-		parent: null,
-		children: [],
-		internal: {
-			type: nodeType,
-			content: convertObjectToString(item),
-			contentDigest: helpers.createContentDigest(item)
-		}
-	};
+const handleCreateNodeFromData = async (item = null, nodeType = null, helpers = {}, endpoint = null) => {
+	const { createNode, createNodeId, createContentDigest } = helpers;
 
-	const node = Object.assign({}, item, nodeMetadata);
+	if (!isEmpty(item) && !isEmpty(nodeType)) {
+		const stringifiedItem = convertObjectToString(item);
+		const uuid = randomUUID();
 
-	helpers
-		.createNode(node)
-		.then(() => {
-			log.warn(`(OK) [CREATE NODE] ${endpoint} - ${helpers.createNodeId(`${nodeType}-${item.id}`)}`);
+		const nodeMetadata = {
+			id: createNodeId(`${uuid}-${nodeType}-${endpoint}`),
+			parent: null,
+			children: [],
+			internal: {
+				type: nodeType,
+				content: stringifiedItem,
+				contentDigest: createContentDigest(stringifiedItem)
+			}
+		};
+		const node = { ...item, ...nodeMetadata };
 
-			return node;
-		})
-		.catch((err) => {
-			log.error(`(FAIL) [CREATE NODE] ${endpoint} - ${helpers.createNodeId(`${nodeType}-${item.id}`)}`, err.message);
+		await createNode(node)
+			.then(() => {
+				console.info(`[NODE] ${node?.internal?.contentDigest} - ${nodeType} - (OK)`);
 
-			throw err;
-		});
+				return node;
+			})
+			.catch((err) => {
+				console.error(`[NODE] ${node?.internal?.contentDigest} - ${nodeType} (FAIL)`);
+				console.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
+
+				return err;
+			});
+	}
 };
 
 /**
@@ -91,10 +131,43 @@ exports.pluginOptionsSchema = ({ Joi }) =>
 				"object.required": "The `auth` object is required."
 			})
 			.description("The auth credentials for the BigCommerce site"),
-		endpoints: Joi.object()
-			.required()
+		globals: Joi.object()
+			.when("enabled", {
+				is: true,
+				then: Joi.object({
+					schema: Joi.string()
+						.required()
+						.allow(null)
+						.default(null)
+						.messages({
+							"string.empty": "The `globals.schema` is empty. Please provide a valid schema.",
+							"string.required": "The `globals.schema` is required."
+						})
+						.description("The schema for the Optimizely/Episerver site")
+				})
+			})
 			.messages({
-				"object.required": "The `endpoints` object is required."
+				"object.required": "The `globals` object is required."
+			})
+			.description("The global options for the plugin"),
+		endpoints: Joi.array()
+			.required()
+			.items({
+				nodeName: Joi.string()
+					.required()
+					.messages({
+						"string.empty": "The `endpoints[index].nodeName` is empty. Please provide a valid node name.",
+						"string.required": "The `endpoints[index].nodeName` is required."
+					})
+					.description("The name of the node to create"),
+				endpoint: Joi.string()
+					.required()
+					.messages({
+						"string.empty": "The `endpoints[index].endpoint` is empty. Please provide a valid endpoint.",
+						"string.required": "The `endpoints[index].endpoint` is required."
+					})
+					.description("The endpoint to create nodes for"),
+				schema: Joi.string().allow(null).default(null).description("The schema to use for the node")
 			})
 			.description("The endpoints to create nodes for"),
 		preview: Joi.object({
@@ -109,9 +182,11 @@ exports.pluginOptionsSchema = ({ Joi }) =>
 		})
 			.default(false)
 			.description("The preview mode settings"),
-		log_level: Joi.string().default("info").description("The log level to use"),
-		response_type: Joi.string().default("json").description("The response type to use"),
-		request_timeout: Joi.number().default(REQUEST_TIMEOUT).description("The request timeout to use in milliseconds")
+		response_type: Joi.string().default(REQUEST_RESPONSE_TYPE).description("The response type to use"),
+		request_timeout: Joi.number().default(REQUEST_TIMEOUT).description("The request timeout to use in milliseconds"),
+		request_throttle_interval: Joi.number().default(REQUEST_THROTTLE_INTERVAL).description("The request throttle interval to use in milliseconds"),
+		request_debounce_interval: Joi.number().default(REQUEST_DEBOUNCE_INTERVAL).description("The request debounce interval to use in milliseconds"),
+		request_concurrency: Joi.number().default(REQUEST_CONCURRENCY).description("The maximum amount of concurrent requests to make at a given time")
 	});
 
 /**
@@ -122,25 +197,28 @@ exports.pluginOptionsSchema = ({ Joi }) =>
  * @param {Object} pluginOptions
  * @returns {Promise<void>} Node creation promise
  */
-exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, pluginOptions) => {
+exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, createContentDigest }, pluginOptions) => {
 	// Prepare plugin options
 	const {
-		auth: { client_id = null, secret = null, access_token = null, store_hash = null, headers = {} },
-		endpoints = null,
+		auth: { client_id = null, secret = null, access_token = null, store_hash = null, headers = AUTH_HEADERS },
+		endpoints = [],
 		preview = false,
-		log_level = "info",
-		response_type = "json",
-		request_timeout = REQUEST_TIMEOUT
+		response_type = REQUEST_RESPONSE_TYPE,
+		request_timeout = REQUEST_TIMEOUT,
+		request_throttle_interval = REQUEST_THROTTLE_INTERVAL,
+		request_debounce_interval = REQUEST_DEBOUNCE_INTERVAL,
+		request_concurrency = REQUEST_CONCURRENCY
 	} = pluginOptions;
 
-	// Custom logger based on the `log_level` plugin option
-	const log = logger(log_level);
-
 	// Prepare node sourcing helpers
-	const helpers = Object.assign({}, actions, {
+	const helpers = {
+		createNode,
 		createContentDigest,
 		createNodeId
-	});
+	};
+
+	let cachedData = await cache.get(CACHE_KEY);
+	let sourceData = null;
 
 	// Create a new BigCommerce instance
 	const bigcommerce = new BigCommerce({
@@ -149,134 +227,252 @@ exports.sourceNodes = async ({ actions, createNodeId, createContentDigest }, plu
 		secret,
 		store_hash,
 		response_type,
-		headers: Object.assign(headers, {
+		headers: {
+			...headers,
 			"X-Auth-Client": client_id,
 			"X-Auth-Token": access_token,
 			"Access-Control-Allow-Headers": ACCESS_CONTROL_ALLOW_HEADERS,
 			"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS,
 			"Access-Control-Allow-Origin": CORS_ORIGIN
-		}),
-		log,
-		request_timeout
+		},
+		request_timeout,
+		request_throttle_interval,
+		request_debounce_interval,
+		request_concurrency
 	});
 
-	// Get the endpoints from the BigCommerce site and create nodes
-	await Promise.allSettled(
-		Object.entries(endpoints).map(
-			async ([nodeName, endpoint]) =>
-				await bigcommerce
-					.get(endpoint)
-					.then((res) => {
-						// If the data object is not on the response, it could be `v2` which returns an array as the root, so use that as a fallback
-						const resData = "data" in res && Array.isArray(res.data) ? res.data : res;
+	/**
+	 * @description Handle node creation
+	 * @param {*} sourceData
+	 * @returns {Promise<void>} Node creation promise
+	 */
+	const handleNodeCreation = async (sourceData = null) => {
+		sourceData
+			?.filter(({ status = null, value: { nodeName = null, endpoint = null } }) => status === "fulfilled" && !isEmpty(nodeName) && !isEmpty(endpoint))
+			?.map(async ({ status = null, value: { nodeName = null, data = null, endpoint = null } }) => {
+				// Check if the data was retrieved successfully
+				if (status === "fulfilled" && !isEmpty(nodeName) && !isEmpty(endpoint) && !isEmpty(data)) {
+					const updatedData = handleCamelizeKeys(data);
 
-						// Create node for each item in the response
-						return "data" in res && Array.isArray(res.data)
-							? resData.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint, log))
-							: Array.isArray(res)
-							? res.map((datum) => handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint, log))
-							: handleCreateNodeFromData(resData, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash}` + endpoint, log);
-					})
-					.catch((err) => {
-						log.error(`An error occurred while fetching endpoint data: ${err.message}`);
-
-						return err;
-					})
-		)
-	).finally(async () => {
-		// If preview mode is enabled, create a preview node
-		if (IS_DEV && preview) {
-			if (!preview.enabled && typeof preview.enabled !== "boolean" && !preview.site_url && typeof preview.site_url !== "string" && preview.site_url?.length === 0) {
-				throw new Error("Incorrect preview settings. Check the `preview` object. It must have `enabled` and `site_url` properties set correctly.");
-			}
-
-			log.warn("Subscribing you to BigCommerce API webhook...");
-
-			// Make a `POST` request to the BigCommerce API to subscribe to its webhook
-			const body = {
-				scope: "store/product/updated",
-				is_active: true,
-				destination: `${preview.site_url}/__BigcommercePreview`
-			};
-
-			await bigcommerce
-				.get(BIGCOMMERCE_WEBHOOK_API_ENDPOINT)
-				.then((res) => {
-					if ("data" in res && Object.keys(res.data).length > 0) {
-						log.warn("BigCommerce API webhook subscription already exists. Skipping subscription...");
-						log.info("BigCommerce API webhook subscription complete");
-						log.warn("Running preview server...");
+					// Create nodes from the data
+					if ("data" in updatedData && isArrayType(updatedData)) {
+						updatedData?.map(async (datum) => {
+							await handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
+						});
+					} else if (isArrayType(updatedData)) {
+						updatedData?.map(async (datum) => {
+							await handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
+						});
 					} else {
-						(async () =>
-							await bigcommerce.post(BIGCOMMERCE_WEBHOOK_API_ENDPOINT, body).then((res) => {
-								if ("data" in res && Object.keys(res.data).length > 0) {
-									log.info("BigCommerce API webhook subscription created successfully.");
-									log.info("Running preview server...");
-								}
-							}))();
+						await handleCreateNodeFromData(updatedData, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
+					}
+				}
+
+				// Resolve the promise
+				return;
+			}) || null;
+
+		// Cache the data
+		await cache.set(CACHE_KEY, sourceData).catch((err) => console.error(`[ERROR] ${err?.message} || ${convertObjectToString(err)} || "An error occurred while caching the data. Please try again later."`));
+
+		// Resolve the promise
+		return sourceData;
+	};
+
+	if (!isEmpty(cachedData)) {
+		// Send log message to console if the cached data is available
+		console.warn(`[CACHE] Current cache is available. Proceeding to node creation...`);
+
+		// Create nodes from the cached data
+		await handleNodeCreation(cachedData);
+
+		// Resolve the promise
+		return cachedData;
+	} else {
+		// Send log message to console if the cached data is not available
+		console.warn(`[CACHE] Current cache is not available. Proceeding to source data...`);
+
+		// Get the endpoints from the BigCommerce site and create nodes
+		await Promise.allSettled(
+			endpoints?.map(async ({ nodeName = null, endpoint = null }) => {
+				const results = await bigcommerce.get({
+					url: endpoint,
+					headers: {
+						...headers,
+						"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS
+					}
+				});
+
+				// Resolve the promise
+				return {
+					nodeName,
+					data: results || null,
+					endpoint
+				};
+			}) || null
+		)
+			.then(async (res) => {
+				// Store the data in the cache
+				if (!isEmpty(res)) {
+					sourceData = res;
+				}
+
+				// Create nodes from the cached data
+				await handleNodeCreation(sourceData);
+
+				// Resolve the promise
+				return sourceData;
+			})
+			.catch((err) => {
+				// Send log message to console if an error occurred
+				console.error(`[GET] ${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`);
+
+				// Reject the promise
+				return err;
+			})
+			.finally(async () => {
+				// If preview mode is enabled, create a preview node
+				if (IS_DEV && preview) {
+					if (!preview?.enabled && !isBooleanType(preview?.enabled) && !isStringType(preview.site_url) && isEmpty(preview.site_url)) {
+						throw new Error("Incorrect preview settings. Check the `preview` object. It must have `enabled` and `site_url` properties set correctly.");
 					}
 
-					// Start the preview server
-					const server = new http.createServer(
-						micro(async (req, res) => {
-							await sleep(request_timeout);
+					console.warn(`[WEBHOOK] Subscribing you to BigCommerce API webhook...`);
 
-							const request = await micro.json(req);
-							const productId = request.data.id;
+					// Make a `POST` request to the BigCommerce API to subscribe to its webhook
+					const body = {
+						scope: "store/product/updated",
+						is_active: true,
+						destination: `${preview.site_url}/__BigcommercePreview`
+					};
 
-							// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
-							const newProduct = await bigcommerce.get(`/catalog/products/${productId}`);
-							const nodeToUpdate = newProduct.data;
+					// Express app to handle the webhook
+					const app = express(async (req, res) => {
+						const request = await app.json(req);
+						const productId = request.data.id;
 
-							if (nodeToUpdate.id) {
-								helpers.createNode({
-									...nodeToUpdate,
-									id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
-									parent: null,
-									children: [],
-									internal: {
-										type: "BigCommerceNode",
-										contentDigest: createContentDigest(nodeToUpdate)
-									}
-								});
+						// Webhooks don't send any data, so we need to make a request to the BigCommerce API to get the product data
+						const newProduct = await bigcommerce.get(`/catalog/products/${productId}`);
+						const nodeToUpdate = newProduct.data;
 
-								if (this.log_level === "debug") {
-									log.debug(`Updated node: ${nodeToUpdate.id}`);
+						if (nodeToUpdate.id) {
+							helpers.createNode({
+								...nodeToUpdate,
+								id: createNodeId(`${nodeToUpdate?.id ?? `BigCommerceNode`}`),
+								parent: null,
+								children: [],
+								internal: {
+									type: "BigCommerceNode",
+									contentDigest: createContentDigest(nodeToUpdate)
 								}
+							});
+
+							console.info(`[NODE] Updated node: ${nodeToUpdate.id}`);
+						}
+
+						// Send a response back to the BigCommerce API
+						res.end("OK");
+					});
+
+					await bigcommerce
+						.get({
+							url: BIGCOMMERCE_WEBHOOK_API_ENDPOINT,
+							headers: {
+								...headers,
+								"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS
+							}
+						})
+						.then(async (res) => {
+							if (!isEmpty(res) && "data" in res) {
+								console.warn(`[WEBHOOK] BigCommerce API webhook subscription already exists. Skipping subscription...`);
+								console.info(`[WEBHOOK] BigCommerce API webhook subscription complete`);
+								console.warn(`[PREVIEW] Running preview server...`);
+							} else {
+								await bigcommerce
+									.post({
+										url: BIGCOMMERCE_WEBHOOK_API_ENDPOINT,
+										body,
+										headers: {
+											...headers,
+											"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS
+										}
+									})
+									.then((res) => {
+										if (!isEmpty(res) && "data" in res) {
+											console.info(`[WEBHOOK] BigCommerce API webhook subscription created successfully.`);
+											console.info(`[PREVIEW] Running preview server...`);
+										}
+									});
 							}
 
-							// Send a response back to the BigCommerce API
-							res.end("OK");
+							// Start the preview server
+							const server = new http.createServer(app);
+
+							server.listen(8033, console.warn(`[PREVIEW] Now listening to changes for live preview at /__BigcommercePreview`));
+
+							return res;
 						})
-					);
+						.catch((err) => {
+							console.error(`[WEBHOOK] ${err?.message || convertObjectToString(err) || "An error occurred while subscribing to BigCommerce via webhook. Please try again later."}`, "\n");
 
-					server.listen(8033, log.warn("Now listening to changes for live preview at /__BigcommercePreview"));
+							throw err;
+						});
+				}
 
-					return res;
-				})
-				.catch((err) => {
-					log.error(`An error occurred while creating BigCommerce API webhook subscription. ${err.message}`);
+				return;
+			});
+	}
 
-					throw err;
-				});
-		}
+	console.info(`${APP_NAME} task processing complete!`);
 
-		log.info("@epicdesignlabs/gatsby-source-bigcommerce task processing complete!");
-
-		return;
-	});
+	return;
 };
 
 /**
- * ============================================================================
- * Create a dev server for previewing the site when `preview` is enabled
- * ============================================================================
+ * @description Create schema customizations
+ * @param {Object} actions
+ * @returns {void}
+ */
+exports.createSchemaCustomization = ({ actions: { createTypes } }, pluginOptions) => {
+	let typeDefs = ``;
+
+	const { globals: { schema = null } = null, endpoints = [] } = pluginOptions;
+
+	if (!isEmpty(endpoints)) {
+		endpoints?.map(({ nodeName = null, schema = null }) => {
+			if (!isEmpty(nodeName) && !isEmpty(schema)) {
+				typeDefs += `
+					${schema}
+				`;
+			}
+		});
+	}
+
+	if (!isEmpty(schema)) {
+		typeDefs += `
+			${schema}
+		`;
+	}
+
+	if (!isEmpty(typeDefs)) {
+		typeDefs = _.trim(typeDefs);
+
+		createTypes(typeDefs);
+	}
+
+	return;
+};
+
+/**
+ * @description Create a dev server for previewing the site when `preview` is enabled
+ * @param {Object} app
+ * @returns {void}
  */
 exports.onCreateDevServer = ({ app }) =>
 	app.use(
 		"/__BigcommercePreview/",
 		createProxyMiddleware({
-			target: `http://localhost:8033`,
+			target: `http://localhost:4000`,
 			secure: false
 		})
 	);
