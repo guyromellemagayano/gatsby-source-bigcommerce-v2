@@ -1,7 +1,6 @@
 "use strict";
 
 import { randomUUID } from "crypto";
-import { createProxyMiddleware } from "http-proxy-middleware";
 import _ from "lodash";
 import {
 	ACCESS_CONTROL_ALLOW_CREDENTIALS,
@@ -354,17 +353,3 @@ exports.createSchemaCustomization = ({ actions: { createTypes } }, pluginOptions
 
 	return;
 };
-
-/**
- * @description Create a dev server for previewing the site when `preview` is enabled
- * @param {Object} app
- * @returns {void}
- */
-exports.onCreateDevServer = ({ app }) =>
-	app.use(
-		"/__BigcommercePreview/",
-		createProxyMiddleware({
-			target: `http://localhost:8033`,
-			secure: false
-		})
-	);
