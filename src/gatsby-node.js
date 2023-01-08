@@ -17,29 +17,8 @@ import {
 	REQUEST_TIMEOUT
 } from "./constants";
 import { BigCommerce } from "./libs/bigcommerce";
-import { convertObjectToString, convertStringToCamelCase } from "./utils/convertValues";
-import { isArrayType, isEmpty, isObjectType } from "./utils/typeCheck";
-
-/**
- * @description Camelize keys of an object
- * @param {Object} obj
- * @returns {Object} Object with camelCase keys
- */
-const handleCamelizeKeys = (obj) => {
-	if (isArrayType(obj) && !isEmpty(obj)) {
-		return obj?.map((item) => handleCamelizeKeys(item));
-	} else if (isObjectType(obj) && !isEmpty(obj)) {
-		return Object.keys(obj).reduce(
-			(result, key) => ({
-				...result,
-				[convertStringToCamelCase(key)]: handleCamelizeKeys(obj[key])
-			}),
-			{}
-		);
-	}
-
-	return obj;
-};
+import { convertObjectToString } from "./utils/convertValues";
+import { isArrayType, isEmpty } from "./utils/typeCheck";
 
 /**
  * @description Create a node from the data
@@ -66,6 +45,7 @@ const handleCreateNodeFromData = async (item = null, nodeType = null, helpers = 
 				contentDigest: createContentDigest(stringifiedItem)
 			}
 		};
+
 		const node = { ...item, ...nodeMetadata };
 
 		await createNode(node)
@@ -234,19 +214,17 @@ exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, cre
 			?.map(async ({ status = null, value: { nodeName = null, data = null, endpoint = null } }) => {
 				// Check if the data was retrieved successfully
 				if (status === "fulfilled" && !isEmpty(nodeName) && !isEmpty(endpoint) && !isEmpty(data)) {
-					const updatedData = handleCamelizeKeys(data);
-
 					// Create nodes from the data
-					if ("data" in updatedData && isArrayType(updatedData)) {
-						updatedData?.map(async (datum) => {
+					if ("data" in data && isArrayType(data)) {
+						data?.map(async (datum) => {
 							await handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
 						});
-					} else if (isArrayType(updatedData)) {
-						updatedData?.map(async (datum) => {
+					} else if (isArrayType(data)) {
+						data?.map(async (datum) => {
 							await handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
 						});
 					} else {
-						await handleCreateNodeFromData(updatedData, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
+						await handleCreateNodeFromData(data, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
 					}
 				}
 
