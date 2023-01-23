@@ -251,57 +251,63 @@ exports.sourceNodes = async ({ actions: { createNode }, reporter, cache, createN
 				await handleNodeCreation(resData, reporter, helpers);
 			});
 	} else {
+		const promises = [];
+
 		// Send log message to console if the cached data is not available
 		reporter.warn(`[CACHE] No cached data found. Proceeding to data sourcing...`);
 
-		// Get the endpoints from the BigCommerce site and create nodes
-		await Promise.allSettled(
-			endpoints.map(async ({ nodeName = null, endpoint = null }) => {
-				const results = await bigcommerce.get({
-					url: endpoint,
-					headers: {
-						...headers,
-						"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS
-					}
-				});
+		// Convert above code using for loop
+		for (let i = 0; i < endpoints.length; i++) {
+			const { nodeName = null, endpoint = null } = endpoints[i];
 
-				// Resolve the promise
-				return {
-					nodeName,
-					data: results || null,
-					endpoint
-				};
-			})
-		)
+			promises.push(
+				await bigcommerce
+					.get({
+						url: endpoint,
+						headers: {
+							...headers,
+							"Access-Control-Allow-Credentials": ACCESS_CONTROL_ALLOW_CREDENTIALS
+						}
+					})
+					.then((res) => {
+						// Resolve the promise
+						return {
+							nodeName,
+							data: res || null,
+							endpoint
+						};
+					})
+			);
+		}
+
+		// Get the endpoints from the BigCommerce site and create nodes
+		await Promise.allSettled(promises)
 			.then(async (res) => {
 				// Store the data in the cache
 				if (!isEmpty(res)) {
 					sourceData = res;
+
+					// Create nodes from the cached data
+					sourceData
+						?.filter((item) => item?.status === "fulfilled")
+						?.map(async (item) => {
+							const items = {
+								nodeName: item.value.nodeName,
+								data: item?.value?.data?.data || item?.value?.data || null,
+								endpoint: item.value.endpoint
+							};
+
+							await handleNodeCreation(items, reporter, helpers);
+						});
+
+					// Cache the data when the data is available and the environment is development
+					if (!isEmpty(sourceData) && IS_DEV) {
+						await cache
+							.set(CACHE_KEY, sourceData)
+							.then(() => reporter.info(`[CACHE] Cached ${sourceData.length} items successfully.`))
+							.catch((err) => reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "There was an error while caching the data. Please try again later."}`));
+					}
 				}
-
-				// Create nodes from the cached data
-				sourceData
-					?.filter((item) => item?.status === "fulfilled")
-					?.map(async (item) => {
-						const items = {
-							nodeName: item.value.nodeName,
-							data: item?.value?.data?.data || item?.value?.data || null,
-							endpoint: item.value.endpoint
-						};
-
-						await handleNodeCreation(items, reporter, helpers);
-					});
-
-				// Cache the data when the data is available and the environment is development
-				if (!isEmpty(sourceData) || IS_DEV) {
-					await cache
-						.set(CACHE_KEY, sourceData)
-						.then(() => reporter.info(`[CACHE] Cached ${sourceData.length} items successfully.`))
-						.catch((err) => reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "There was an error while caching the data. Please try again later."}`));
-				}
-
-				// Resolve the promise
-				return sourceData;
 			})
 			.catch((err) => {
 				this.reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "There was an error while fetching and expanding the endpoints. Please try again later."}`);
