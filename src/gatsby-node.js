@@ -9,6 +9,7 @@ import {
 	AUTH_HEADERS,
 	CACHE_KEY,
 	CORS_ORIGIN,
+	IS_DEV,
 	REQUEST_BIGCOMMERCE_API_URL,
 	REQUEST_CONCURRENCY,
 	REQUEST_DEBOUNCE_INTERVAL,
@@ -291,11 +292,13 @@ exports.sourceNodes = async ({ actions: { createNode }, reporter, cache, createN
 						await handleNodeCreation(items, reporter, helpers);
 					});
 
-				// Cache the data
-				await cache
-					.set(CACHE_KEY, sourceData)
-					.then(() => reporter.info(`[CACHE] Cached ${sourceData.length} items successfully.`))
-					.catch((err) => reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "There was an error while caching the data. Please try again later."}`));
+				// Cache the data when the data is available and the environment is development
+				if (!isEmpty(sourceData) || IS_DEV) {
+					await cache
+						.set(CACHE_KEY, sourceData)
+						.then(() => reporter.info(`[CACHE] Cached ${sourceData.length} items successfully.`))
+						.catch((err) => reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "There was an error while caching the data. Please try again later."}`));
+				}
 
 				// Resolve the promise
 				return sourceData;
