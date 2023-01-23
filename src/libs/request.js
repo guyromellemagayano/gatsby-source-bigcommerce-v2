@@ -36,7 +36,7 @@ export class Request {
 	 * @param {Object} body
 	 * @param {Object} headers
 	 */
-	async run({ url = null, method = null, body = null, headers = null }) {
+	async run({ url = null, method = null, body = null, headers = null, reporter }) {
 		const updatedMethod = convertStringToLowercase(method);
 
 		let config = {
@@ -73,7 +73,7 @@ export class Request {
 
 			if (this.pending_requests > this.request_concurrency) {
 				// Return null if there are too many pending requests
-				console.warn(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (THROTTLED) (${this.pending_requests} pending ${this.pending_requests > 1 ? "requests" : "request"})`);
+				reporter.warn(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (THROTTLED) (${this.pending_requests} pending ${this.pending_requests > 1 ? "requests" : "request"})`);
 			}
 
 			// Increment pending requests
@@ -83,15 +83,15 @@ export class Request {
 		}),
 			(res) => {
 				// Send info message to console if request is successful
-				console.info(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (${res?.status} ${res?.statusText})`);
+				reporter.info(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (${res?.status} ${res?.statusText})`);
 
 				// Return response
 				return res;
 			},
 			(err) => {
 				// Send error message to console if request fails
-				console.error(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (ERROR)`);
-				console.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
+				reporter.error(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (ERROR)`);
+				reporter.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
 
 				// Return error message
 				return err;
@@ -103,10 +103,10 @@ export class Request {
 			this.pending_requests = Math.max(0, this.pending_requests > 0 ? this.pending_requests - 1 : 0);
 
 			// Send info message to console if request is successful
-			console.info(
-				`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (${res?.status} ${res?.statusText}) - (${res?.data?.length || Object.keys(res?.data)?.length || 0} ${
-					res?.data?.length === 1 || Object.keys(res?.data)?.length === 1 ? "item" : "items"
-				}) - (${this.pending_requests} pending ${this.pending_requests > 1 ? "requests" : "request"})`
+			reporter.info(
+				`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (${res?.status} ${res?.statusText}) - (${this.pending_requests} pending ${
+					this.pending_requests > 1 || this.pending_requests === 0 ? "requests" : "request"
+				})`
 			);
 
 			// Return response
@@ -118,19 +118,19 @@ export class Request {
 					this.pending_requests = Math.max(0, this.pending_requests > 0 ? this.pending_requests - 1 : 0);
 
 					// Send log message when error response is received
-					console.error(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (${err.response.status} ${err.response.statusText})`);
-					console.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
+					reporter.error(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (${err.response.status} ${err.response.statusText})`);
+					reporter.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
 				} else if (err.request) {
 					// Decrement pending requests
 					this.pending_requests = Math.max(0, this.pending_requests > 0 ? this.pending_requests - 1 : 0);
 
 					// Send log message when error request is received
-					console.error(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (${err.request.status} ${err.request.statusText})`);
-					console.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
+					reporter.error(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (${err.request.status} ${err.request.statusText})`);
+					reporter.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
 				} else {
 					// Send log message when error is thrown
-					console.error(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (ERROR)`);
-					console.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
+					reporter.error(`[${convertStringToUppercase(method)}] ${REQUEST_BIGCOMMERCE_API_URL + url} - (ERROR)`);
+					reporter.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
 				}
 
 				// Return error message

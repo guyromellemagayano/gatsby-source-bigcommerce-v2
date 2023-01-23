@@ -18,6 +18,7 @@ import {
 } from "./constants";
 import { BigCommerce } from "./libs/bigcommerce";
 import { convertObjectToString } from "./utils/convertValues";
+import { getURLPathname } from "./utils/parseURL";
 import { isArrayType, isEmpty } from "./utils/typeCheck";
 
 /**
@@ -28,15 +29,15 @@ import { isArrayType, isEmpty } from "./utils/typeCheck";
  * @param {string} endpoint
  * @returns {Promise<void>} Node creation promise
  */
-const handleCreateNodeFromData = async (item = null, nodeType = null, helpers = {}, endpoint = null) => {
+const handleCreateNodeFromData = async (item, nodeType, helpers, endpoint, reporter) => {
 	const { createNode, createNodeId, createContentDigest } = helpers;
 
-	if (!isEmpty(item) && !isEmpty(nodeType)) {
-		const stringifiedItem = convertObjectToString(item);
+	if (!isEmpty(nodeType)) {
+		const stringifiedItem = !isEmpty(item) ? convertObjectToString(item) : "";
 		const uuid = randomUUID();
 
 		const nodeMetadata = {
-			id: createNodeId(`${uuid}-${nodeType}-${endpoint}`),
+			id: createNodeId(`${uuid}-${nodeType}-${getURLPathname(endpoint)}`),
 			parent: null,
 			children: [],
 			internal: {
@@ -50,18 +51,21 @@ const handleCreateNodeFromData = async (item = null, nodeType = null, helpers = 
 
 		await createNode(node)
 			.then(() => {
-				console.info(`[NODE] ${node?.internal?.contentDigest} - ${nodeType} - (OK)`);
-
-				return node;
+				reporter.info(`[NODE] ${node?.internal?.contentDigest} - ${nodeType} - (OK)`);
+				return Promise.resolve();
 			})
 			.catch((err) => {
-				console.error(`[NODE] ${node?.internal?.contentDigest} - ${nodeType} (FAIL)`);
-				console.error("\n", `${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`, "\n");
-
+				reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`);
 				return err;
 			});
 	}
 };
+
+/**
+ * @description Verify if plugin loaded correctly
+ * @returns {void}
+ */
+exports.onPreBootstrap = ({ reporter }) => reporter.info(`${APP_NAME} loaded successfully! 🎉`);
 
 /**
  * @description Validate the plugin options
@@ -155,12 +159,13 @@ exports.pluginOptionsSchema = ({ Joi }) =>
 /**
  * @description Source and cache nodes from the BigCommerce API
  * @param {Object} actions
+ * @param {Object} reporter
  * @param {Object} createNodeId
  * @param {Object} createContentDigest
  * @param {Object} pluginOptions
  * @returns {Promise<void>} Node creation promise
  */
-exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, createContentDigest }, pluginOptions) => {
+exports.sourceNodes = async ({ actions: { createNode }, reporter, cache, createNodeId, createContentDigest }, pluginOptions) => {
 	// Prepare plugin options
 	const {
 		auth: { client_id = null, secret = null, access_token = null, store_hash = null, headers = AUTH_HEADERS },
@@ -171,16 +176,6 @@ exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, cre
 		request_debounce_interval = REQUEST_DEBOUNCE_INTERVAL,
 		request_concurrency = REQUEST_CONCURRENCY
 	} = pluginOptions;
-
-	// Prepare node sourcing helpers
-	const helpers = {
-		createNode,
-		createContentDigest,
-		createNodeId
-	};
-
-	let cachedData = await cache.get(CACHE_KEY);
-	let sourceData = null;
 
 	// Create a new BigCommerce instance
 	const bigcommerce = new BigCommerce({
@@ -200,61 +195,67 @@ exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, cre
 		request_timeout,
 		request_throttle_interval,
 		request_debounce_interval,
-		request_concurrency
+		request_concurrency,
+		reporter
 	});
+
+	// Action helpers
+	const helpers = {
+		createNode,
+		createContentDigest,
+		createNodeId
+	};
 
 	/**
 	 * @description Handle node creation
 	 * @param {*} sourceData
 	 * @returns {Promise<void>} Node creation promise
 	 */
-	const handleNodeCreation = async (sourceData = null) => {
-		sourceData
-			?.filter(({ status = null, value: { nodeName = null, endpoint = null } }) => status === "fulfilled" && !isEmpty(nodeName) && !isEmpty(endpoint))
-			?.map(async ({ status = null, value: { nodeName = null, data = null, endpoint = null } }) => {
-				// Check if the data was retrieved successfully
-				if (status === "fulfilled" && !isEmpty(nodeName) && !isEmpty(endpoint) && !isEmpty(data)) {
-					// Create nodes from the data
-					if ("data" in data && isArrayType(data)) {
-						data?.map(async (datum) => {
-							await handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
-						});
-					} else if (isArrayType(data)) {
-						data?.map(async (datum) => {
-							await handleCreateNodeFromData(datum, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
-						});
-					} else {
-						await handleCreateNodeFromData(data, nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + endpoint}`);
-					}
+	const handleNodeCreation = async (node, reporter, helpers) => {
+		try {
+			// Create nodes from the data
+			if (!isEmpty(node.data)) {
+				if (isArrayType(node.data)) {
+					node.data?.map(async (datum) => {
+						await handleCreateNodeFromData(datum, node.nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + node.endpoint}`, reporter);
+
+						return Promise.resolve(datum);
+					});
+				} else {
+					await handleCreateNodeFromData(node.data, node.nodeName, helpers, REQUEST_BIGCOMMERCE_API_URL + `/stores/${store_hash + node.endpoint}`, reporter);
+
+					return Promise.resolve(node.data);
 				}
-
-				// Resolve the promise
-				return;
-			}) || null;
-
-		// Cache the data
-		await cache.set(CACHE_KEY, sourceData).catch((err) => console.error(`[ERROR] ${err?.message} || ${convertObjectToString(err)} || "An error occurred while caching the data. Please try again later."`));
-
-		// Resolve the promise
-		return sourceData;
+			}
+		} catch (err) {
+			reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "An error occurred while creating nodes. Please try again later."}`);
+			return err;
+		}
 	};
 
+	// Check if the plugin stored the data in the cache
+	const cachedData = await cache.get(CACHE_KEY);
+	let sourceData = null;
+
 	if (!isEmpty(cachedData)) {
-		// Send log message to console if the cached data is available
-		console.warn(`[CACHE] Current cache is available. Proceeding to node creation...`);
+		// Send log message to reporter if the cached data is available
+		reporter.warn(`[CACHE] Cached data found. Proceeding to node creation...`);
 
 		// Create nodes from the cached data
-		await handleNodeCreation(cachedData);
+		cachedData
+			?.filter((item) => item?.status === "fulfilled")
+			?.map(async (item) => {
+				const resData = item?.value?.data;
 
-		// Resolve the promise
-		return cachedData;
+				await handleNodeCreation(resData, reporter, helpers);
+			});
 	} else {
 		// Send log message to console if the cached data is not available
-		console.warn(`[CACHE] Current cache is not available. Proceeding to source data...`);
+		reporter.warn(`[CACHE] No cached data found. Proceeding to data sourcing...`);
 
 		// Get the endpoints from the BigCommerce site and create nodes
 		await Promise.allSettled(
-			endpoints?.map(async ({ nodeName = null, endpoint = null }) => {
+			endpoints.map(async ({ nodeName = null, endpoint = null }) => {
 				const results = await bigcommerce.get({
 					url: endpoint,
 					headers: {
@@ -269,7 +270,7 @@ exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, cre
 					data: results || null,
 					endpoint
 				};
-			}) || null
+			})
 		)
 			.then(async (res) => {
 				// Store the data in the cache
@@ -278,23 +279,32 @@ exports.sourceNodes = async ({ actions: { createNode }, cache, createNodeId, cre
 				}
 
 				// Create nodes from the cached data
-				await handleNodeCreation(sourceData);
+				sourceData
+					?.filter((item) => item?.status === "fulfilled")
+					?.map(async (item) => {
+						const items = {
+							nodeName: item.value.nodeName,
+							data: item?.value?.data?.data || item?.value?.data || null,
+							endpoint: item.value.endpoint
+						};
+
+						await handleNodeCreation(items, reporter, helpers);
+					});
+
+				// Cache the data
+				await cache
+					.set(CACHE_KEY, sourceData)
+					.then(() => reporter.info(`[CACHE] Cached ${sourceData.length} items successfully.`))
+					.catch((err) => reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "There was an error while caching the data. Please try again later."}`));
 
 				// Resolve the promise
 				return sourceData;
 			})
 			.catch((err) => {
-				// Send log message to console if an error occurred
-				console.error(`[GET] ${err?.message || convertObjectToString(err) || "An error occurred. Please try again later."}`);
-
-				// Reject the promise
+				this.reporter.error(`[ERROR] ${err?.message || convertObjectToString(err) || "There was an error while fetching and expanding the endpoints. Please try again later."}`);
 				return err;
 			});
 	}
-
-	console.info(`${APP_NAME} task processing complete!`);
-
-	return;
 };
 
 /**
@@ -331,3 +341,9 @@ exports.createSchemaCustomization = ({ actions: { createTypes } }, pluginOptions
 
 	return;
 };
+
+/**
+ * @description Verify if plugin ended successfully
+ * @returns {void}
+ */
+exports.onPostBootstrap = ({ reporter }) => reporter.info(`${APP_NAME} tasks complete! 🎉`);
