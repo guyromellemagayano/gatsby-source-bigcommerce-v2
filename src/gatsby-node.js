@@ -246,9 +246,13 @@ exports.sourceNodes = async ({ actions: { createNode }, reporter, cache, createN
 		cachedData
 			?.filter((item) => item?.status === "fulfilled")
 			?.map(async (item) => {
-				const resData = item?.value?.data;
+				const items = {
+					nodeName: item.value.nodeName,
+					data: item?.value?.data?.data || item?.value?.data || null,
+					endpoint: item.value.endpoint
+				};
 
-				await handleNodeCreation(resData, reporter, helpers);
+				await handleNodeCreation(items, reporter, helpers);
 			});
 	} else {
 		const promises = [];
