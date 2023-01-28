@@ -33,6 +33,11 @@ import { isArrayType, isEmpty } from "./utils/typeCheck";
 const handleCreateNodeFromData = async (item, nodeType, helpers, endpoint, reporter) => {
 	const { createNode, createNodeId, createContentDigest } = helpers;
 
+	// Add bigcommerce_id to the node
+	if (!isEmpty(item?.id)) {
+		item.bigcommerce_id = item.id;
+	}
+
 	if (!isEmpty(nodeType)) {
 		const stringifiedItem = !isEmpty(item) ? convertObjectToString(item) : "";
 		const uuid = randomUUID();
