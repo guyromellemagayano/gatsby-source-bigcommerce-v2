@@ -1,4 +1,4 @@
-# gatsby-source-bigcommerce
+# gatsby-source-bigcommerce-v2
 
 This unofficial source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.
 
@@ -32,13 +32,13 @@ Provide support for the following features:
 For `npm`:
 
 ```console
-npm install gatsby-source-bigcommerce
+npm install gatsby-source-bigcommerce-v2
 ```
 
 For `yarn`:
 
 ```console
-yarn add gatsby-source-bigcommerce
+yarn add gatsby-source-bigcommerce-v2
 ```
 
 Setup this plugin in `gatsby-config.js` as follows **_(\*required fields)_**:
@@ -51,7 +51,7 @@ module.exports = {
     // ...
 
     {
-      resolve: "gatsby-source-bigcommerce",
+      resolve: "gatsby-source-bigcommerce-v2",
       options: {
         auth: {
           client_id: process.env.BIGCOMMERCE_API_CLIENT_ID // The client ID of your BigCommerce store.,
