@@ -3,10 +3,10 @@ export const IS_DEV = process.env.NODE_ENV === "development";
 export const IS_PROD = process.env.NODE_ENV === "production";
 
 // App
-export const APP_NAME = "@epicdesignlabs/gatsby-source-bigcommerce";
+export const APP_NAME = "gatsby-source-bigcommerce";
 
 // Cache
-export const CACHE_KEY = "@epicdesignlabs/gatsby-source-bigcommerce";
+export const CACHE_KEY = "gatsby-source-bigcommerce";
 
 // Request
 export const REQUEST_BIGCOMMERCE_API_URL = "https://api.bigcommerce.com";
