@@ -1,6 +1,6 @@
 {
 	"name": "gatsby-source-bigcommerce-v2",
-	"version": "3.2.2",
+	"version": "0.1.0",
 	"description": "This unofficial source plugin makes BigCommerce API data available in GatsbyJS sites. Currently in active development.",
 	"scripts": {
 		"build": "babel ./src/ --out-dir ./ --source-maps",
